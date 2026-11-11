@@ -16,15 +16,6 @@ body:
         If your request relates to a security vulnerability, report it privately instead:
         https://github.com/NaaBTech/.github/blob/main/SECURITY.md
 
-  - type: input
-    id: repository
-    attributes:
-      label: Affected repository
-      description: The NaaB Tech repository the request applies to.
-      placeholder: NaaBTech/repository-name
-    validations:
-      required: true
-
   - type: textarea
     id: summary
     attributes:
@@ -46,7 +37,7 @@ body:
     id: proposal
     attributes:
       label: Proposed solution
-      description: How you would expect this to work. An outline is enough.
+      description: How you would expect this to work. An outline is enough — you do not need to specify an implementation.
     validations:
       required: true
 
@@ -54,7 +45,7 @@ body:
     id: alternatives
     attributes:
       label: Alternative approaches
-      description: Other ways you have considered solving this, and why they are less suitable.
+      description: Optional. Other ways you have considered solving this, and why they are less suitable.
     validations:
       required: false
 
@@ -62,7 +53,7 @@ body:
     id: impact
     attributes:
       label: Potential impact
-      description: Who benefits, how much the request matters, and any effect on compatibility, performance, or security.
+      description: Optional. Who benefits, and how much the request matters. You do not need to assess effects on compatibility, performance, or security.
     validations:
       required: false
 
@@ -70,7 +61,7 @@ body:
     id: context
     attributes:
       label: Additional context
-      description: Anything else that helps — links, related issues, or a description of the environment where this matters.
+      description: Optional. Anything else that helps — links, related issues, or the environment where this matters.
     validations:
       required: false
 

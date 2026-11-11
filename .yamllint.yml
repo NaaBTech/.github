@@ -1,0 +1,15 @@
+extends: default
+
+rules:
+  # Long lines are expected in issue form descriptions and Markdown tables.
+  line-length:
+    max: 200
+    allow-non-breakable-words: true
+    allow-non-breakable-inline-mappings: true
+  # A leading `---` is optional.
+  document-start:
+    present: false
+  # `on:` in a workflow file is a YAML 1.1 boolean. The form schema rules
+  # cover the keys GitHub actually rejects.
+  truthy:
+    check-keys: false

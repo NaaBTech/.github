@@ -1,0 +1,25 @@
+{
+  "retrieved_utc": "2026-11-11T18:52:22Z",
+  "source": "https://www.schemastore.org/",
+  "schemas": {
+    "github-issue-forms.json": {
+      "upstream_url": "https://www.schemastore.org/github-issue-forms.json",
+      "upstream_sha256": "c2722dbf00334ce4fdeffa960b8c9047caf4f1cbb8f3809663f4d604b1d3ae76",
+      "vendored_sha256": "02d42c8172640557a49cfdd4e7f16e6a5a7064e8cd9f1f50bcc5bf1e4f97ba57",
+      "patched": true
+    },
+    "github-issue-config.json": {
+      "upstream_url": "https://www.schemastore.org/github-issue-config.json",
+      "upstream_sha256": "899e718f4b8c965413b07ec63d8f089792a10c42409270db560b9a7ec0224a5a",
+      "vendored_sha256": "ae126343168fb93606c548210b224409fd0600ecfd97ef1f3b7262dda5c8d3c3",
+      "patched": false
+    },
+    "github-vulnerability-report-form.json": {
+      "derived_from": "github-issue-forms.json",
+      "upstream_url": "https://docs.github.com/en/code-security/how-tos/report-and-fix-vulnerabilities/configure-vulnerability-reporting/configure-for-a-repository",
+      "vendored_sha256": "63002188d0ce88628f4c372e6034f48451d11dec5359d3bcdfa05a41ca026edd",
+      "patched": false,
+      "derived": true
+    }
+  }
+}

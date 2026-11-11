@@ -13,25 +13,16 @@ body:
 
         **Do not use this form for security vulnerabilities.** A security report must stay private. Follow the security policy instead: https://github.com/NaaBTech/.github/blob/main/SECURITY.md
 
-        Remove credentials, tokens, and personal data from everything you paste below.
-
-  - type: input
-    id: repository
-    attributes:
-      label: Affected repository
-      description: The NaaB Tech repository where the problem occurs.
-      placeholder: NaaBTech/repository-name
-    validations:
-      required: true
+        Remove credentials, tokens, and personal data from everything you paste below, and do not attach files that contain them.
 
   - type: input
     id: version
     attributes:
       label: Affected version or commit
-      description: The release tag, version number, or commit SHA in which the problem was observed.
+      description: Optional, if you know it. The release tag, version number, or commit SHA in which the problem was observed.
       placeholder: v1.2.3
     validations:
-      required: true
+      required: false
 
   - type: textarea
     id: summary
@@ -46,7 +37,7 @@ body:
     id: environment
     attributes:
       label: Environment
-      description: Where the problem occurs. Include the operating system, runtime and version, deployment method, and any configuration that affects the behaviour.
+      description: Optional. Where the problem occurs — operating system, runtime and version, deployment method, and any configuration that affects the behavior.
       value: |
         - Operating system:
         - Runtime and version:
@@ -70,7 +61,7 @@ body:
   - type: textarea
     id: expected
     attributes:
-      label: Expected behaviour
+      label: Expected behavior
       description: What you expected to happen.
     validations:
       required: true
@@ -78,7 +69,7 @@ body:
   - type: textarea
     id: actual
     attributes:
-      label: Actual behaviour
+      label: Actual behavior
       description: What happened instead. Include the exact error message where possible.
     validations:
       required: true
@@ -87,7 +78,7 @@ body:
     id: logs
     attributes:
       label: Relevant logs or error output
-      description: Paste the output that shows the problem. Remove credentials, tokens, and personal data first.
+      description: Optional. Paste the output that shows the problem. Remove credentials, tokens, and personal data first.
       render: text
     validations:
       required: false
@@ -96,7 +87,7 @@ body:
     id: attachments
     attributes:
       label: Screenshots or supporting files
-      description: Optional. Add a screenshot or a file that shows the problem.
+      description: Optional. Add a screenshot or a file that shows the problem. Do not upload anything containing credentials, tokens, or personal data.
     validations:
       required: false
       accept: ".png,.jpg,.jpeg,.gif,.txt,.log,.pdf,.zip"
@@ -105,7 +96,7 @@ body:
     id: context
     attributes:
       label: Additional context
-      description: Anything else that helps — related issues, workarounds you have found, or the impact on your work.
+      description: Optional. Anything else that helps — related issues, workarounds you have found, or the impact on your work.
     validations:
       required: false
 
@@ -115,6 +106,6 @@ body:
       label: Before you submit
       options:
         - label: I have searched the open and closed issues and this problem has not been reported yet.
-        - label: I have removed credentials, tokens, and personal data from the information above.
+        - label: I have removed credentials, tokens, and personal data from the information above, including any attachments.
         - label: I have read the Code of Conduct and agree to follow it.
           required: true

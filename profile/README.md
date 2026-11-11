@@ -6,7 +6,7 @@
 
 </div>
 
-NaaB Tech (ناب تک) is a technology company focused on cybersecurity, software engineering, and infrastructure. Security is a design constraint from the first line of code, not a final check before release.
+NaaB Tech (ناب تک) is a technology company focused on cybersecurity, software engineering, and infrastructure. Our approach treats security as part of the design rather than a final check before release.
 
 ## What We Do
 

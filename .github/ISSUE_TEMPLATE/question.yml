@@ -1,0 +1,66 @@
+name: Question
+description: Ask a question about using or configuring a NaaB Tech project.
+title: "[Question]: "
+labels:
+  - question
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for questions about using, configuring, or understanding a project.
+
+        If you have found a defect, the **Bug report** form is a better fit. If you want to
+        propose new functionality, use the **Feature request** form.
+
+        **Do not report security vulnerabilities here.** A security report must stay private.
+        Follow the security policy instead: https://github.com/NaaBTech/.github/blob/main/SECURITY.md
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: What you would like to know.
+      placeholder: How do I ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: goal
+    attributes:
+      label: What you are trying to accomplish
+      description: Optional. The task you are working toward. This is usually the most useful part of the question.
+    validations:
+      required: false
+
+  - type: input
+    id: version
+    attributes:
+      label: Project version or environment
+      description: Optional, if relevant. The version, operating system, or runtime the question applies to.
+      placeholder: v1.2.3
+    validations:
+      required: false
+
+  - type: textarea
+    id: attempted
+    attributes:
+      label: What you have already tried
+      description: Optional. What you have read, run, or configured so far, and where it did not work.
+    validations:
+      required: false
+
+  - type: textarea
+    id: references
+    attributes:
+      label: Relevant documentation or references
+      description: Optional. Links to documentation, issues, or other sources you have consulted.
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Optional. Anything else that would help someone answer the question.
+    validations:
+      required: false
