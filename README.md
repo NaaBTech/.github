@@ -18,10 +18,12 @@ Nothing here is application code. It is documentation and configuration, maintai
 | [`CONTRIBUTING.md`](CONTRIBUTING.md) | Default contribution guidelines for all organization repositories. |
 | [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) | Default code of conduct, based on the Contributor Covenant v2.1. |
 | [`SECURITY.md`](SECURITY.md) | Default security policy and vulnerability disclosure process. |
-| [`SUPPORT.md`](SUPPORT.md) | Default support guidance and escalation routing. |
+| [`SUPPORT.md`](SUPPORT.md) | Default support guidance and channel routing. |
 | [`PULL_REQUEST_TEMPLATE.md`](PULL_REQUEST_TEMPLATE.md) | Default pull request template. |
-| [`.github/ISSUE_TEMPLATE/bug_report.yml`](.github/ISSUE_TEMPLATE/bug_report.yml) | Default issue form for bug reports. |
-| [`.github/ISSUE_TEMPLATE/feature_request.yml`](.github/ISSUE_TEMPLATE/feature_request.yml) | Default issue form for feature requests. |
+| [`REPOSITORY_ONBOARDING.md`](REPOSITORY_ONBOARDING.md) | Checklist for preparing and maintaining a repository. |
+| [`.github/ISSUE_TEMPLATE/bug_report.yml`](.github/ISSUE_TEMPLATE/bug_report.yml) | Default issue form: bug report. |
+| [`.github/ISSUE_TEMPLATE/feature_request.yml`](.github/ISSUE_TEMPLATE/feature_request.yml) | Default issue form: feature request. |
+| [`.github/ISSUE_TEMPLATE/question.yml`](.github/ISSUE_TEMPLATE/question.yml) | Default issue form: question. |
 | [`.github/ISSUE_TEMPLATE/config.yml`](.github/ISSUE_TEMPLATE/config.yml) | Default issue template chooser configuration. |
 | [`.github/VULNERABILITY_REPORT.yml`](.github/VULNERABILITY_REPORT.yml) | Default private vulnerability report form. |
 
@@ -37,11 +39,13 @@ Nothing here is application code. It is documentation and configuration, maintai
 │   ├── ISSUE_TEMPLATE/
 │   │   ├── bug_report.yml             # Default issue form: bug report
 │   │   ├── feature_request.yml        # Default issue form: feature request
+│   │   ├── question.yml               # Default issue form: question
 │   │   └── config.yml                 # Default issue template chooser
 │   └── VULNERABILITY_REPORT.yml       # Default private vulnerability report form
 ├── CODE_OF_CONDUCT.md                 # Default code of conduct
 ├── CONTRIBUTING.md                    # Default contribution guidelines
 ├── PULL_REQUEST_TEMPLATE.md           # Default pull request template
+├── REPOSITORY_ONBOARDING.md           # Repository setup and maintenance checklist
 ├── SECURITY.md                        # Default security policy
 ├── SUPPORT.md                         # Default support guidance
 └── README.md                          # This file
@@ -49,7 +53,48 @@ Nothing here is application code. It is documentation and configuration, maintai
 
 ---
 
-## Verified Contact Channels
+## How Organization Defaults Work
+
+This repository is the organization's `.github` repository. GitHub serves the files here as **defaults** for the organization's repositories.
+
+The rules are:
+
+1. A default applies only when the target repository does **not** define its own file of the same type. A repository's own file always wins.
+2. If a repository defines a valid `.github/ISSUE_TEMPLATE` folder of its own, **none** of the organization's default issue templates are used for that repository.
+3. Files that can live in more than one location are resolved in this order: the repository's `.github` folder, then the repository root, then the repository's `docs` folder.
+4. Defaults apply to the organization's repositories regardless of their visibility.
+5. **Defaults are not copied into the target repository.** They are served by GitHub when the page is requested. They do not appear in the target repository's Git history, in a clone, in a package, or in a download.
+
+A repository may therefore replace any default here with something more specific, and that is an intended use — not a deviation. Individual repositories are expected to define stricter rules where their technology, audience, or release process requires it.
+
+> **Location note.** GitHub resolves default issue templates, the default funding file, and the default vulnerability-report file from the `.github` folder *inside* this repository, which is why they live under [`.github/`](.github) rather than in the root. Root-level files here are the defaults for the remaining community health file types.
+
+### What a default does not do
+
+Defaults supply guidance and templates. They do not:
+
+- Add configuration, code, or settings to a repository.
+- Enable a repository setting, such as private vulnerability reporting, branch protection, or code scanning.
+- Create labels in a repository. See [Label Requirements](#label-requirements).
+
+---
+
+## Label Requirements
+
+The default issue forms apply labels automatically: `bug`, `enhancement`, and `question`.
+
+**GitHub applies a label only if a label with that name already exists in the destination repository.** A label created in this repository does not propagate to other repositories.
+
+Two things are therefore required for automatic labelling to work:
+
+1. **The label must exist in the destination repository.** It is present in this repository, because the default forms live here.
+2. **New repositories need the labels up front.** Organization owners can configure default labels under **Organization Settings → Repository → General → Repository labels**. Default labels are included in **newly created repositories only** — adding, editing, or deleting an organization default label does not add, edit, or delete that label in existing repositories.
+
+Existing repositories in the organization therefore need `bug`, `enhancement`, and `question` created in them, or the forms will be submitted without a label. That is a repository-level action, performed by a maintainer of each repository. The checklist in [`REPOSITORY_ONBOARDING.md`](REPOSITORY_ONBOARDING.md) covers it.
+
+---
+
+## Officially Published Channels
 
 These are the channels NaaB Tech publishes on its GitHub organization profile. They are the only contact details that may be referenced in these files.
 
@@ -63,24 +108,15 @@ These are the channels NaaB Tech publishes on its GitHub organization profile. T
 | Telegram | [t.me/NaaBTech](https://t.me/NaaBTech) |
 | Instagram | [@naabtech.ir](https://instagram.com/naabtech.ir) |
 
+Three separate things are worth distinguishing:
+
+- **Officially published** — the channel appears in NaaB Tech's GitHub organization profile. It is a sanctioned contact route.
+- **Responding** — the URL currently returns a successful response. This is a transient technical condition and says nothing about whether the channel is maintained.
+- **Actively maintained** — someone is actively posting to or answering on the channel. This cannot be inferred from a published URL, and is not claimed for any channel listed above.
+
+A channel is listed here because it is officially published, not because it responded when this file was last edited. A temporary server error does not make an official channel invalid, and a channel that stops responding remains an official route until the organization owners say otherwise.
+
 Anything not on this list must be confirmed with the organization owners before it is added to a document.
-
----
-
-## How Organization Defaults Work
-
-This repository is the organization's `.github` repository. GitHub serves the files here as **defaults** for every repository in the organization.
-
-The rules are:
-
-1. A default applies only when the target repository does **not** define its own file of the same type.
-2. If a repository defines a valid `.github/ISSUE_TEMPLATE` folder of its own, **none** of the organization's default issue templates are used for that repository.
-3. Files that can live in more than one location are resolved in this order: the repository's `.github` folder, then the repository root, then the repository's `docs` folder.
-4. Defaults apply to repositories of any visibility.
-
-A repository may therefore replace any default here with something more specific, and that is an intended use — not a deviation. Individual repositories are expected to define stricter rules where their technology, audience, or release process requires it.
-
-> **Location note.** GitHub resolves default issue templates and the default funding and vulnerability-report files from the `.github` folder *inside* this repository, which is why they live under [`.github/`](.github) rather than in the root. Root-level files here are the defaults for the remaining community health file types.
 
 ---
 
@@ -88,7 +124,8 @@ A repository may therefore replace any default here with something more specific
 
 - **Single source of truth.** These defaults are edited here and nowhere else. Individual repositories are not expected to copy them.
 - **Consistent terminology.** Use "NaaB Tech" for the company, "NaaB Tech organization" for the GitHub organization, and `naabtech.ir` for the website. Keep the Persian brand name ناب تک to the organization profile and the root README.
-- **No fabricated information.** Never add contact addresses, customer names, certifications, partnerships, response-time commitments, funding details, or project statistics that have not been confirmed. Use only the channels in [Verified Contact Channels](#verified-contact-channels). Where a value is genuinely required but not yet available, use a clearly marked placeholder and track it as an open item.
+- **No fabricated information.** Never add contact addresses, customer names, certifications, partnerships, response-time commitments, funding details, or project statistics that have not been confirmed. Use only the channels in [Officially Published Channels](#officially-published-channels). Where a value is genuinely required but not yet available, use a clearly marked placeholder and track it as an open item.
+- **No unapproved legal commitments.** Safe-harbour provisions, immunity, indemnification, response-time guarantees, and bug bounty terms are business and legal decisions. They require the organization owners' approval and, where appropriate, legal review before they are written into these files.
 - **Repository-specific rules win.** A default must stay general enough to apply across different technologies. Anything that only makes sense for one repository belongs in that repository.
 - **Change discipline.** Changes to these files follow the conventions in [`CONTRIBUTING.md`](CONTRIBUTING.md), including the branch naming and commit message conventions described there.
 
@@ -100,4 +137,6 @@ A repository may therefore replace any default here with something more specific
 - [Customizing your organization's profile](https://docs.github.com/en/organizations/collaborating-with-groups-in-organizations/customizing-your-organizations-profile)
 - [Setting up your project for healthy contributions](https://docs.github.com/en/communities/setting-up-your-project-for-healthy-contributions)
 - [Syntax for issue forms](https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-issue-forms)
+- [Managing default labels for repositories in your organization](https://docs.github.com/en/organizations/managing-organization-settings/managing-default-labels-for-repositories-in-your-organization)
+- [Configuring private vulnerability reporting for a repository](https://docs.github.com/en/code-security/how-tos/report-and-fix-vulnerabilities/configure-vulnerability-reporting/configure-for-a-repository)
 - [Contributor Covenant v2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct.html)

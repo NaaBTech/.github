@@ -1,0 +1,4 @@
+# Tooling pinned for the documentation validation workflow.
+# These versions are the ones the workflow is known to pass with.
+PyYAML==6.0.3
+yamllint==1.38.0

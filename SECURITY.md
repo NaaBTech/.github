@@ -1,6 +1,6 @@
 # Security Policy
 
-NaaB Tech builds and operates software and infrastructure. Security is a core part of the work, not an afterthought, and this policy describes how vulnerabilities in our software are reported, triaged, and resolved.
+NaaB Tech builds and operates software and infrastructure. This policy explains how to report a vulnerability in that software, how a report is handled, and — separately — what authorization is required before any system is tested.
 
 This policy is the organization-level default. An individual repository may include its own `SECURITY.md` with more specific guidance; where it exists, it takes precedence over this document for that repository.
 
@@ -10,25 +10,26 @@ This policy is the organization-level default. An individual repository may incl
 
 This policy applies to:
 
-- Public repositories in the [NaaB Tech](https://github.com/NaaBTech) organization.
-- Software, APIs, web applications, and infrastructure published or operated by NaaB Tech.
-- Configuration, deployment artifacts, and documentation in those repositories.
+- Software, APIs, web applications, infrastructure, configuration, and documentation published in NaaB Tech repositories, of any visibility.
+- Systems operated by NaaB Tech.
 
 It does **not** apply to:
 
 - Third-party products and services. Report those to their own maintainers.
-- Systems that are not operated by NaaB Tech. See [Security Research and Authorization](#security-research-and-authorization).
-- NaaB Tech systems that are explicitly covered by a signed agreement with a customer. Contact the organization through the [official website](https://naabtech.ir) for those.
+- Systems that NaaB Tech does not own or operate. See [Authorization and Permissions](#authorization-and-permissions).
+- Systems covered by a signed agreement with a customer. Contact the organization through the [official website](https://naabtech.ir).
 
 ---
 
 ## Reporting a Vulnerability
 
-**Do not open a public issue, pull request, or discussion for a security vulnerability.** A public report gives everyone — including attackers — a head start.
+**Do not open a public issue, pull request, or discussion for a vulnerability.** A public report gives everyone — including attackers — a head start.
+
+Reporting a vulnerability is always permitted. Nothing else in this policy is authorized by it. See [Authorization and Permissions](#authorization-and-permissions).
 
 ### Preferred: GitHub private vulnerability reporting
 
-GitHub provides a private reporting channel for each repository. When it is enabled, use it:
+GitHub provides a private reporting channel for repositories. When it is enabled for a repository, use it:
 
 1. Open the affected repository on GitHub.
 2. Go to the **Security** tab.
@@ -37,99 +38,127 @@ GitHub provides a private reporting channel for each repository. When it is enab
 
 The report opens a private advisory that only you and the maintainers can see. You receive a reference for the advisory, which is how fixes and any public credit are tracked.
 
-**Availability depends on repository configuration.** Private vulnerability reporting is enabled per repository by its maintainers, and it may not be enabled everywhere in the organization. If the **Report a vulnerability** option is not present on a repository, use one of the alternatives below. This policy does not promise that the option is available in every repository.
+**Availability is limited, and it depends on repository configuration.**
 
-A private report form is provided at [.github/VULNERABILITY_REPORT.yml](.github/VULNERABILITY_REPORT.yml) and is used where the organization has enabled private reporting.
+- GitHub's private vulnerability reporting interface is available for **public repositories** in which it has been enabled. It is not available for private or internal repositories through the web interface.
+- The feature is enabled **per repository** by an owner, maintainer, or administrator. It is not enabled organization-wide by default.
+- A custom form does not enable the feature. Adding [`VULNERABILITY_REPORT.yml`](.github/VULNERABILITY_REPORT.yml) only customises the questions asked once the feature is already enabled for that repository.
+
+If the **Report a vulnerability** option is not present on a repository, use one of the alternatives below. This policy does not promise that the option is available in any given repository.
+
+A private report form is provided at [.github/VULNERABILITY_REPORT.yml](.github/VULNERABILITY_REPORT.yml) and is used where private reporting has been enabled. A repository may replace it with its own form.
 
 ### Alternatives
 
 If private reporting is not available for the repository in question:
 
-- Email **[info@naabtech.ir](mailto:info@naabtech.ir)** with the subject line `Security report — <repository>` and ask for the security team. Mark the message as containing a security report so that it is routed appropriately.
+- Email **[info@naabtech.ir](mailto:info@naabtech.ir)** with the subject line `Security report — <repository>`. State clearly in the subject line that the message is a security report, so it is routed to the maintainers rather than treated as a general inquiry.
 - For issues affecting several repositories, contact the organization owners through [github.com/NaaBTech](https://github.com/NaaBTech).
 
-> **Open item.** `info@naabtech.ir` is NaaB Tech's published general contact address. A dedicated security mailbox — for example `security@naabtech.ir` — would route reports more reliably and should be designated once that mailbox exists and is staffed. Until then, mark the message clearly so that it reaches the security team rather than general enquiries.
+> **Open item.** `info@naabtech.ir` is NaaB Tech's published general contact address, not a dedicated security mailbox. A dedicated address — for example `security@naabtech.ir` — would route reports more reliably and should be designated once that mailbox exists and is staffed. Until then, mark the message clearly and avoid putting sensitive detail in the subject line.
 
 ### What to include
 
-A complete report helps more than a long one. Please include:
+A complete report helps more than a long one. An incomplete report is still welcome — see [Triage](#triage) below.
 
 | Information | Why it matters |
 | --- | --- |
-| **Affected repository** | The repository name, and the path or component within it if the issue is limited to one. |
-| **Affected version** | The release tag, commit SHA, or deployment identifier where the issue was observed. For unreleased code, the commit SHA or branch. |
+| **Affected component** | The repository, and the path or component within it if the issue is limited to one. |
+| **Affected version** *(if known)* | The release tag, commit SHA, or deployment identifier where the issue was observed. |
 | **Description** | What the vulnerability is and what an attacker gains by exploiting it. |
-| **Impact** | The concrete consequence — unauthorized access, data exposure, privilege escalation, service degradation, and so on. |
-| **Steps to reproduce** | A minimal sequence of steps that a maintainer can follow to confirm the issue. |
-| **Proof of concept** | Request code, a request/response pair, or a configuration excerpt. A proof of concept does not need to be weaponised, and should not contain real credentials or personal data. |
-| **Suggested remediation** | If you have one. This is optional and does not affect how the report is triaged. |
-| **Your contact details** | A way to reach you for follow-up questions. Only if you are comfortable sharing them. |
+| **Impact** *(if you can assess it)* | The concrete consequence — unauthorized access, data exposure, privilege escalation, service degradation, and so on. |
+| **Steps to reproduce** *(if you have them)* | A sequence a maintainer can follow to confirm the issue. |
+| **Proof of concept** *(optional)* | Request code, a request/response pair, or a configuration excerpt. A proof of concept does not need to be weaponised, and must not contain real credentials or personal data. |
+| **Suggested remediation** *(optional)* | If you have one. This does not affect how the report is triaged. |
+| **Your contact details** *(optional)* | A way to reach you for follow-up questions. Only if you are comfortable sharing them. |
 
 Redact credentials, tokens, private keys, and personal data from anything you attach.
 
-### Triage and communication
+### Triage
+
+Reports are triaged by **risk**, not strictly in the order they arrive. The following factors determine priority:
+
+| Factor | What it means for priority |
+| --- | --- |
+| **Severity** | The extent of the impact if the vulnerability is exploited. |
+| **Exploitability** | How much effort an attacker needs, and whether a working path exists. |
+| **Impact** | The consequence for NaaB Tech, its users, or its customers. |
+| **Affected users and systems** | How widely the issue is exposed, and whether it sits on a critical path. |
+| **Exposure and reachability** | Whether the affected component is publicly reachable, and whether it is reachable without authentication. |
+| **Evidence of active exploitation** | Whether the vulnerability appears to be in use in the wild. |
+
+Reports with evidence of active exploitation are treated as the most urgent. Reports that are confirmed not to affect NaaB Tech software are closed with an explanation.
 
 Once a report is received:
 
-- The report is reviewed to confirm the issue, reproduce it, and determine severity and affected versions.
-- You are kept informed through the private advisory thread. That thread is the channel for clarification, remediation updates, and credit decisions.
-- Reports are triaged in the order they are received.
-- Reports that cannot be reproduced or are found not to affect NaaB Tech software are closed with an explanation.
+- You are kept informed through the private advisory thread, or the email thread where private reporting is unavailable. That thread is the channel for clarification, remediation updates, and credit decisions.
 - Credit is offered in the advisory or release notes if you want it, in the form you prefer, including anonymous credit.
 
-> **No service-level commitment.** NaaB Tech does not publish response-time, triage-time, or remediation-time commitments for vulnerability reports. Nothing in this policy is a service-level agreement. If you require a guaranteed response window, that is a commercial arrangement — contact the organization through the [official website](https://naabtech.ir).
+> **No service-level commitment.** NaaB Tech does not publish response-time, triage-time, or remediation-time commitments for vulnerability reports. Nothing in this policy is a service-level agreement, and no ordering described above is a guarantee of a particular outcome.
 
 ### Coordinated disclosure
 
 The goal is a fix that is available before the details are public.
 
-- NaaB Tech works with the reporter to agree on a disclosure timeline once the issue is confirmed and a fix or mitigation is in place.
-- A remediation is prepared, a fix or mitigation is released, and the advisory is published — or the report is closed with the reporter's agreement.
-- Where the issue affects widely used software, coordination with the relevant ecosystem may be necessary. That can extend the timeline, and the reason will be explained.
+- The report is acknowledged through the private channel where one is available.
+- The report is validated and its severity assessed.
+- A disclosure timeline is agreed with the reporter, based on the work needed to release a fix.
+- Remediation and disclosure decisions, and the reasoning behind them, are explained to the reporter.
+- Where an issue affects widely used software, coordination with the relevant ecosystem may be necessary. That can extend the timeline, and the reason is explained to the reporter.
 - Credit is provided as agreed.
 
-**Do not publish the vulnerability before the disclosure is coordinated.** Publishing a proof of concept prematurely exposes every user of the affected software and gives attackers a ready-made tool. If you believe a coordinated timeline is not being honoured, contact the organization through the [official website](https://naabtech.ir) and ask for escalation.
+**NaaB Tech asks that the details of a vulnerability are not made public until a disclosure timeline has been agreed.** This is a request for coordination, not a legal claim about what a reporter is required to do. Publishing a proof of concept prematurely exposes every user of the affected software and hands attackers a ready-made tool, which is why the request is made.
+
+If you believe a coordinated timeline is not being honoured, contact the organization through the [official website](https://naabtech.ir) or [info@naabtech.ir](mailto:info@naabtech.ir) and ask for escalation.
 
 ---
 
-## Rules of Engagement
+## Authorization and Permissions
 
-The following are **not** permitted when researching a NaaB Tech system, even when a vulnerability is genuine:
+**Reporting a vulnerability is not the same as being authorized to test for one.** These are separate permissions, and this policy grants only the first.
 
-- Accessing data that is not yours, or data that the reporter is not authorised to access.
+| Permission | Granted by | What it requires |
+| --- | --- | --- |
+| **Reporting a vulnerability** | This policy | Nothing. Always permitted. |
+| **Testing a NaaB Tech-operated system** | The owner of that system, in writing | An authorization that names the assets, scope, timeframe, and permitted methods. |
+| **Testing a customer-operated or customer-owned system** | The customer or the actual system owner | The same, in writing, from the customer. NaaB Tech's involvement does not substitute for it. |
+| **Testing a third-party system or service** | That system's owner | Nothing in this document applies to third-party systems. |
+| **Conducting a contracted penetration test or security assessment** | A signed engagement agreement | The agreement defines the scope, timing, and test methods. |
+
+Key points:
+
+- **Reporting does not authorize further testing.** Submitting a report is always permitted. Reading, scanning, or interacting with a system beyond what is needed to file the report is not.
+- **Testing live systems requires explicit written authorization from the owner of the system.** A verbal assurance, a public bug bounty listing, or the existence of this policy is not authorization.
+- **Authorization must be specific.** It should name the assets in scope, the window during which testing is permitted, the techniques allowed, and the contact point for unexpected results. An authorization for one system says nothing about any other.
+- **Customer systems require the customer's authorization.** NaaB Tech operating, hosting, or maintaining a system for a customer does not make NaaB Tech the owner of that system for testing purposes.
+- **If authorization is unclear, do not proceed.** Treat the activity as not permitted until the owner confirms it in writing. Questions can be sent to [info@naabtech.ir](mailto:info@naabtech.ir).
+
+### Rules of engagement
+
+Where authorization does exist, the following are outside it:
+
+- Accessing data that is not yours, or data the tester is not authorized to access.
 - Accessing accounts, systems, or data belonging to other users or customers.
 - Extracting, downloading, or retaining personal data, credentials, keys, or configuration beyond the minimum needed to demonstrate the issue.
 - Introducing malware, or modifying data in a way that leaves the system in an altered state.
 - Introducing denial-of-service conditions, including sustained load, resource exhaustion, and lockout of legitimate users.
-- Destroying, corrupting, or deleting data, including test data, without written authorisation.
+- Destroying, corrupting, or deleting data, including test data, without written authorization.
 - Deceptive or destructive testing against shared infrastructure.
 - Using social engineering, physical intrusion, or impersonation of staff, contractors, or users.
-- Scanning, probing, or testing systems that are not owned or operated by NaaB Tech.
-- Continuing to test after a vulnerability has been reported and remediation work has begun.
+- Scanning, probing, or testing systems that are not named in the authorization.
+- Continuing to test after a report has been filed and remediation work has begun.
 
-### Safe harbour
+### No safe-harbour commitment
 
-Good-faith research that follows this policy is authorised by NaaB Tech.
+This policy does not grant permission to test any system, and it does not promise legal protection for testing that was not authorized.
 
-- NaaB Tech will not pursue legal action against anyone who follows these rules, including for activities that would otherwise breach a NaaB Tech acceptable-use or terms-of-service condition.
-- NaaB Tech will not hold a reporter liable for damages arising from research conducted under this policy.
-- This safe harbour covers research against NaaB Tech-owned and NaaB Tech-operated systems. It does not extend to third-party systems, and it does not cover activity that violates the rules of engagement above.
+- Reporting a vulnerability is the only activity this policy authorizes.
+- NaaB Tech has not adopted a safe-harbour, immunity, or indemnification provision. A researcher who tests a system without the owner's authorization may be exposed to legal risk, and nothing in this document waives any right or remedy available to the owner of a system.
+- NaaB Tech will not make public accusations against a researcher who acts in good faith and reports findings through the routes described above. That is a statement about how reports are handled, not a legal guarantee.
 
-There is no bug bounty programme. Participation is voluntary and unpaid.
+> **Owner decision.** A safe-harbour provision can be added to this policy. Before it is published it should be drafted and approved by the organization owners and reviewed by legal counsel, and it should name the assets it covers. This policy deliberately does not define an in-scope asset list, because doing so would imply that those assets are authorized for testing.
 
----
-
-## Security Research and Authorization
-
-**Researching a system is not the same as being authorised to test it.**
-
-- Permission to *report* a vulnerability does not imply permission to *test* for one.
-- Testing requires explicit authorisation from the owner of the system. For systems owned by a customer, that authorisation must come from the customer. NaaB Tech's involvement does not substitute for it.
-- If you are unsure whether a system is in scope, or whether your activity is authorised, stop and ask through the [official website](https://naabtech.ir) before proceeding.
-- Authorised penetration tests and security assessments are performed under a written agreement that defines scope, timing, and test methods. Requests for such work should go through the website.
-- Port scanning, vulnerability scanning, and automated tooling against production systems are out of scope unless they are explicitly covered by an authorisation agreement.
-
-When you are not sure whether something is permitted, treat it as prohibited until it is confirmed in writing. Questions about authorisation can be sent to [info@naabtech.ir](mailto:info@naabtech.ir).
+There is no bug bounty program. Participation is voluntary and unpaid.
 
 ---
 
@@ -146,6 +175,7 @@ Please do not open a public issue in a NaaB Tech repository to report an upstrea
 - [Contributing guidelines](CONTRIBUTING.md) — how to report a non-security defect and propose a change.
 - [Support guidance](SUPPORT.md) — where to ask questions that are not security reports.
 - [Code of Conduct](CODE_OF_CONDUCT.md) — expectations for interaction in NaaB Tech spaces.
+- [Repository onboarding](REPOSITORY_ONBOARDING.md) — how private vulnerability reporting is configured for each repository.
 - [GitHub: Configuring private vulnerability reporting for a repository](https://docs.github.com/en/code-security/how-tos/report-and-fix-vulnerabilities/configure-vulnerability-reporting/configure-for-a-repository)
 - [GitHub: Reporting a vulnerability privately](https://docs.github.com/en/code-security/how-tos/report-and-fix-vulnerabilities/report-privately)
 - [GitHub: Coordinated disclosure of security vulnerabilities](https://docs.github.com/en/code-security/concepts/vulnerability-reporting-and-management/coordinated-disclosure)

@@ -1,4 +1,4 @@
-blank_issues_enabled: true
+blank_issues_enabled: false
 contact_links:
   - name: Report a security vulnerability
     url: https://github.com/NaaBTech/.github/blob/main/SECURITY.md
@@ -6,6 +6,6 @@ contact_links:
   - name: Code of Conduct
     url: https://github.com/NaaBTech/.github/blob/main/CODE_OF_CONDUCT.md
     about: The expectations that apply to everyone taking part in NaaB Tech repositories.
-  - name: Website and service inquiries
-    url: https://naabtech.ir
-    about: Questions about services, support contracts, or working with NaaB Tech.
+  - name: Contact NaaB Tech
+    url: https://github.com/NaaBTech
+    about: Service, support, and business inquiries. Email info@naabtech.ir, or use the official website and other channels listed on the organization page.
