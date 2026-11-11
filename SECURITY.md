@@ -55,7 +55,7 @@ If private reporting is not available for the repository in question:
 - Email **[info@naabtech.ir](mailto:info@naabtech.ir)** with the subject line `Security report — <repository>`. State clearly in the subject line that the message is a security report, so it is routed to the maintainers rather than treated as a general inquiry.
 - For issues affecting several repositories, contact the organization owners through [github.com/NaaBTech](https://github.com/NaaBTech).
 
-> **Open item.** `info@naabtech.ir` is NaaB Tech's published general contact address, not a dedicated security mailbox. A dedicated address — for example `security@naabtech.ir` — would route reports more reliably and should be designated once that mailbox exists and is staffed. Until then, mark the message clearly and avoid putting sensitive detail in the subject line.
+> **Open item.** `info@naabtech.ir` is NaaB Tech's published general contact address, not a dedicated security mailbox. A dedicated security address would route reports more reliably and should be designated once that mailbox exists and is staffed. Until then, mark the message clearly and avoid putting sensitive detail in the subject line.
 
 ### What to include
 
