@@ -107,28 +107,32 @@ Every project that needs continuous integration therefore needs its own workflow
 
 ### Sharing One Workflow Across Repositories
 
-If the same checks are needed in several repositories, make the workflow **reusable** and call it explicitly.
+If the same checks are needed in several repositories, the workflow has to be made **reusable**, and each repository has to call it explicitly.
 
-1. Give the workflow a `workflow_call` trigger:
+1. A reusable workflow must explicitly declare the `workflow_call` trigger:
 
    ```yaml
    on:
      workflow_call:
    ```
 
-2. Each consuming repository adds its own caller workflow that calls it by path and reference:
+2. Each consuming repository adds its own caller workflow that calls it by path and reference. Using a hypothetical example — `example-org/example-repo` is not a NaaB Tech repository, and no such reusable workflow exists today:
 
    ```yaml
    jobs:
      validate-docs:
-       uses: NaaBTech/.github/.github/workflows/validate-docs.yml@main
+       uses: example-org/example-repo/.github/workflows/validate-docs.yml@main
    ```
 
    A reusable workflow is called from a **job**, not from a step, and the reference is `owner/repository/.github/workflows/file.yml@ref`. Reusable workflows must sit directly in a repository's `.github/workflows/` directory — subdirectories of that directory are not supported.
 
 3. **A consuming repository must call the workflow explicitly.** Nothing runs automatically. A repository that does not contain the caller workflow gets no checks.
 
-4. **If the shared workflow lives in a private repository**, grant access to the repositories that will use it: in the private repository, go to **Settings → Actions → General**, and in the **Access** section select **Accessible from repositories in the 'NaaBTech' organization**.
+4. **The documentation validator in this repository is not a reusable workflow.** `validate-docs.yml` does not declare `on: workflow_call`, so it cannot be called from another repository, and it is not offered as a shared workflow.
+
+   Making it reusable would take more than adding the trigger. It validates this repository's own files — the vendored schemas, the default forms, and the organization-specific label, naming, and link rules — and it assumes those paths exist. Turning it into a reusable workflow would mean deciding what it should validate in a calling repository, what inputs it accepts, and how it reports results back. That is a deliberate adaptation, not a one-line change, and it has not been done.
+
+5. **If the shared workflow lives in a private repository**, grant access to the repositories that will use it: in the private repository, go to **Settings → Actions → General**, and in the **Access** section select **Accessible from repositories in the 'NaaBTech' organization**.
 
    Be aware of the trade-off: making a private repository accessible to Actions workflows in other repositories means outside collaborators on those repositories can indirectly access the private repository, and can view the logs of workflow runs that use it. Share a workflow from a private repository only when that is acceptable.
 

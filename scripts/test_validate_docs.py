@@ -1,12 +1,18 @@
 #!/usr/bin/env python3
-"""Negative tests for the documentation validator.
+"""Negative and positive tests for the documentation validator.
 
-Every case below is an intentionally invalid document. The test asserts that
-the validator reports an error for each one, so that a regression which
-silently accepts a malformed form is caught.
+The suite contains two kinds of case:
 
-The cases also pin the expected error text, so a change in the validator that
-stops detecting a problem is visible.
+- **Negative cases** — intentionally invalid documents. The validator must
+  report an error for each one, so that a regression which silently accepts a
+  malformed form is caught. There are 20 of these.
+- **Positive control cases** — valid documents. The validator must report no
+  errors at all for these, so that the checks cannot become so strict that
+  they reject a good form. There are 2 of these.
+
+That is 22 cases in total. The expected error text is pinned for each
+negative case, so a change in the validator that stops detecting a problem is
+visible.
 
 Usage:
     python scripts/test_validate_docs.py
@@ -363,15 +369,16 @@ unknown_key: true
 
 def run():
     failures = []
-    checked = 0
+    positive = 0
+    negative = 0
 
-    # Valid documents must produce no errors at all.
+    # Positive control cases: valid documents must produce no errors at all.
     for name, kind, text in (
         ("valid issue form", "issue", VALID_ISSUE_FORM),
         ("valid vulnerability form", "vulnerability", VALID_VULNERABILITY_FORM),
     ):
+        positive += 1
         data, error = parse_yaml_text(text)
-        checked += 1
         if error:
             failures.append(f"{name}: the fixture itself did not parse: {error}")
             continue
@@ -381,7 +388,7 @@ def run():
             failures.append(f"{name}: expected no errors, got {errors}")
 
     for name, kind, text, expected in FORM_CASES:
-        checked += 1
+        negative += 1
         data, error = parse_yaml_text(text)
         if error:
             failures.append(f"{name}: the fixture itself did not parse: {error}")
@@ -394,7 +401,7 @@ def run():
             failures.append(f"{name}: expected an error containing '{expected}', got {errors}")
 
     for name, text, expected in YAML_CASES:
-        checked += 1
+        negative += 1
         data, error = parse_yaml_text(text)
         if error is None:
             failures.append(f"{name}: expected a YAML parse error, but the text parsed successfully")
@@ -402,7 +409,7 @@ def run():
             failures.append(f"{name}: expected the error to mention '{expected}', got '{error}'")
 
     for name, text, expected in CONFIG_CASES:
-        checked += 1
+        negative += 1
         data, error = parse_yaml_text(text)
         if error:
             failures.append(f"{name}: the fixture itself did not parse: {error}")
@@ -413,7 +420,11 @@ def run():
         elif not any(expected.lower() in message.lower() for message in errors):
             failures.append(f"{name}: expected an error containing '{expected}', got {errors}")
 
-    print(f"validate_docs negative tests: {checked} case(s) checked")
+    total = negative + positive
+    print(
+        f"validate_docs tests: {negative} negative case(s) and {positive} positive control(s) "
+        f"checked ({total} total)"
+    )
     if failures:
         for failure in failures:
             print(f"  FAIL {failure}")

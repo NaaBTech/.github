@@ -60,7 +60,7 @@ Nothing here is application code. It is documentation and configuration, maintai
 │   └── README.md                      # Schema sources and maintenance procedure
 ├── scripts/
 │   ├── validate_docs.py               # File, form, and link validation
-│   ├── test_validate_docs.py          # Negative tests for the validator
+│   ├── test_validate_docs.py          # Validator tests: negative cases and positive controls
 │   └── update_schemas.py              # Refreshes the vendored schemas
 ├── .markdownlint.json                 # markdownlint configuration
 ├── .yamllint.yml                      # yamllint configuration

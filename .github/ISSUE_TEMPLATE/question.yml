@@ -28,9 +28,9 @@ body:
     id: goal
     attributes:
       label: What you are trying to accomplish
-      description: The task you are working toward. This is usually the most useful part of the question.
+      description: Optional. The task you are working toward. This is usually the most useful part of the question.
     validations:
-      required: true
+      required: false
 
   - type: input
     id: version

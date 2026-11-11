@@ -21,9 +21,10 @@ concurrency:
 # the repository that contains it. Every project that needs CI has its own
 # workflow file in its own .github/workflows directory.
 #
-# To share this validation with other repositories, make it a reusable
-# workflow (on: workflow_call) and have each project call it explicitly. That
-# is a deliberate future decision, not something this file does today.
+# This workflow is not a reusable workflow: it does not declare
+# on: workflow_call, so other repositories cannot call it. Making it reusable
+# would require deliberate adaptation, because it validates this repository's
+# own files and assumes their paths exist. See REPOSITORY_ONBOARDING.md.
 jobs:
   validate:
     name: Validate documentation
@@ -46,7 +47,7 @@ jobs:
       - name: Check YAML syntax and style
         run: yamllint --strict --config-file .yamllint.yml .
 
-      - name: Check the validator's own negative tests
+      - name: Check the validator's own tests
         run: python scripts/test_validate_docs.py
 
       - name: Check file naming, form schema, and internal links
