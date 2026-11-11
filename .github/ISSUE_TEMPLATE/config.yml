@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/NaaBTech/.github/blob/main/SECURITY.md
+    about: Security reports must stay private. Read the security policy and use private vulnerability reporting instead of a public issue.
+  - name: Code of Conduct
+    url: https://github.com/NaaBTech/.github/blob/main/CODE_OF_CONDUCT.md
+    about: The expectations that apply to everyone taking part in NaaB Tech repositories.
+  - name: Website and service inquiries
+    url: https://naabtech.ir
+    about: Questions about services, support contracts, or working with NaaB Tech.

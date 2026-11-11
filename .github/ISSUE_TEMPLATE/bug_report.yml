@@ -1,0 +1,120 @@
+name: Bug report
+description: Report a defect in a NaaB Tech project so it can be reproduced and fixed.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug.
+
+        Before you continue, please check the open and closed issues in this repository — the problem may already have been reported.
+
+        **Do not use this form for security vulnerabilities.** A security report must stay private. Follow the security policy instead: https://github.com/NaaBTech/.github/blob/main/SECURITY.md
+
+        Remove credentials, tokens, and personal data from everything you paste below.
+
+  - type: input
+    id: repository
+    attributes:
+      label: Affected repository
+      description: The NaaB Tech repository where the problem occurs.
+      placeholder: NaaBTech/repository-name
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Affected version or commit
+      description: The release tag, version number, or commit SHA in which the problem was observed.
+      placeholder: v1.2.3
+    validations:
+      required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: A concise description of the problem in one or two sentences.
+      placeholder: When I do "X", "Y" happens instead of "Z".
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Where the problem occurs. Include the operating system, runtime and version, deployment method, and any configuration that affects the behaviour.
+      value: |
+        - Operating system:
+        - Runtime and version:
+        - Deployment method:
+        - Relevant configuration:
+    validations:
+      required: false
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The sequence of steps that reproduces the problem. A minimal reproduction is ideal.
+      placeholder: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+      description: What you expected to happen.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour
+      description: What happened instead. Include the exact error message where possible.
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs or error output
+      description: Paste the output that shows the problem. Remove credentials, tokens, and personal data first.
+      render: text
+    validations:
+      required: false
+
+  - type: upload
+    id: attachments
+    attributes:
+      label: Screenshots or supporting files
+      description: Optional. Add a screenshot or a file that shows the problem.
+    validations:
+      required: false
+      accept: ".png,.jpg,.jpeg,.gif,.txt,.log,.pdf,.zip"
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Anything else that helps — related issues, workarounds you have found, or the impact on your work.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you submit
+      options:
+        - label: I have searched the open and closed issues and this problem has not been reported yet.
+        - label: I have removed credentials, tokens, and personal data from the information above.
+        - label: I have read the Code of Conduct and agree to follow it.
+          required: true

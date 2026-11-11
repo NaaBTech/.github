@@ -1,0 +1,84 @@
+name: Feature request
+description: Propose a new capability or an improvement to an existing one.
+title: "[Feature]: "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an improvement.
+
+        Describe the problem before the solution. A request is strongest when it explains
+        the situation that forces the need, who runs into it, and what happens today —
+        the implementation can then be decided on its merits.
+
+        If your request relates to a security vulnerability, report it privately instead:
+        https://github.com/NaaBTech/.github/blob/main/SECURITY.md
+
+  - type: input
+    id: repository
+    attributes:
+      label: Affected repository
+      description: The NaaB Tech repository the request applies to.
+      placeholder: NaaBTech/repository-name
+    validations:
+      required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Feature summary
+      description: A concise summary of the capability you are asking for.
+      placeholder: Add support for ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem being addressed
+      description: The situation that makes this necessary. Describe what you are trying to achieve and what you do today instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: How you would expect this to work. An outline is enough.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternative approaches
+      description: Other ways you have considered solving this, and why they are less suitable.
+    validations:
+      required: false
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Potential impact
+      description: Who benefits, how much the request matters, and any effect on compatibility, performance, or security.
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Anything else that helps — links, related issues, or a description of the environment where this matters.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you submit
+      options:
+        - label: I have searched the open and closed issues and a similar request does not already exist.
+        - label: I have read the Code of Conduct and agree to follow it.
+          required: true
