@@ -10,22 +10,9 @@ NaaB Tech (ناب تک) is a technology company focused on cybersecurity, softwa
 
 ## What We Do
 
-<table>
-  <tr>
-    <td width="33%" valign="top">
-      <strong>Cybersecurity</strong><br><br>
-      Application security, API security, and security engineering.
-    </td>
-    <td width="33%" valign="top">
-      <strong>Software Engineering</strong><br><br>
-      Software development and practical engineering solutions.
-    </td>
-    <td width="33%" valign="top">
-      <strong>Infrastructure &amp; Networking</strong><br><br>
-      Networking, servers, and infrastructure engineering.
-    </td>
-  </tr>
-</table>
+- **Cybersecurity** — Application security, API security, and security engineering.
+- **Software Engineering** — Software development and practical engineering solutions.
+- **Infrastructure & Networking** — Networking, servers, and infrastructure engineering.
 
 ## Featured Projects
 
