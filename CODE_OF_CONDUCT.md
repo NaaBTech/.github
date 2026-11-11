@@ -36,11 +36,11 @@ This Code of Conduct applies within all community spaces, and also applies when 
 
 ## Enforcement
 
-Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the community leaders responsible for enforcement at **[INSERT CONTACT METHOD — the NaaB Tech conduct contact, to be designated by the organization owners]**. All complaints will be reviewed and investigated promptly and fairly.
+Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the community leaders responsible for enforcement at **info@naabtech.ir**. All complaints will be reviewed and investigated promptly and fairly.
 
 All community leaders are obligated to respect the privacy and security of the reporter of any incident.
 
-> **Open item.** The bracketed contact method above is a placeholder required by the Contributor Covenant. Until NaaB Tech designates a dedicated conduct contact, reports may be submitted through GitHub's [abuse reporting flow](https://support.github.com/contact/report-abuse), or by privately contacting the organization owners at [github.com/NaaBTech](https://github.com/NaaBTech). The placeholder should be replaced with a monitored address as part of the next review of this file.
+> **Note.** `info@naabtech.ir` is NaaB Tech's published general contact address, and it reaches the organization owners responsible for enforcement. A dedicated conduct mailbox should be designated so that conduct reports are separated from general enquiries and routed without delay. Reports that involve GitHub's Terms of Service — spam, malicious content, and similar — can be submitted directly through GitHub's [abuse reporting flow](https://support.github.com/contact/report-abuse).
 
 ## Enforcement Guidelines
 
@@ -92,4 +92,4 @@ This section clarifies how the Covenant is applied by NaaB Tech. It does not mod
 
 **What happens after a report.** Reports are reviewed and investigated, and the outcome depends on the Community Impact Guidelines above. Maintainers will aim to keep the reporting person informed of the outcome. A person who makes a report in good faith is not subject to retaliation, even if the allegation is ultimately not upheld.
 
-**Where to ask a question about this policy.** Contact the organization owners through [github.com/NaaBTech](https://github.com/NaaBTech).
+**Where to ask a question about this policy.** Contact the organization owners at [info@naabtech.ir](mailto:info@naabtech.ir) or through [github.com/NaaBTech](https://github.com/NaaBTech).

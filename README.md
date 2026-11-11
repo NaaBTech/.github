@@ -49,6 +49,24 @@ Nothing here is application code. It is documentation and configuration, maintai
 
 ---
 
+## Verified Contact Channels
+
+These are the channels NaaB Tech publishes on its GitHub organization profile. They are the only contact details that may be referenced in these files.
+
+| Channel | Link |
+| --- | --- |
+| Website | [naabtech.ir](https://naabtech.ir) |
+| Email | [info@naabtech.ir](mailto:info@naabtech.ir) |
+| GitHub Organization | [github.com/NaaBTech](https://github.com/NaaBTech) |
+| LinkedIn | [company/naabtech](https://linkedin.com/company/naabtech) |
+| X | [@naabtech](https://x.com/naabtech) |
+| Telegram | [t.me/NaaBTech](https://t.me/NaaBTech) |
+| Instagram | [@naabtech.ir](https://instagram.com/naabtech.ir) |
+
+Anything not on this list must be confirmed with the organization owners before it is added to a document.
+
+---
+
 ## How Organization Defaults Work
 
 This repository is the organization's `.github` repository. GitHub serves the files here as **defaults** for every repository in the organization.
@@ -70,7 +88,7 @@ A repository may therefore replace any default here with something more specific
 
 - **Single source of truth.** These defaults are edited here and nowhere else. Individual repositories are not expected to copy them.
 - **Consistent terminology.** Use "NaaB Tech" for the company, "NaaB Tech organization" for the GitHub organization, and `naabtech.ir` for the website. Keep the Persian brand name ناب تک to the organization profile and the root README.
-- **No fabricated information.** Never add contact addresses, customer names, certifications, partnerships, response-time commitments, funding details, or project statistics that have not been confirmed. Where a value is genuinely required but not yet available, use a clearly marked placeholder and track it as an open item.
+- **No fabricated information.** Never add contact addresses, customer names, certifications, partnerships, response-time commitments, funding details, or project statistics that have not been confirmed. Use only the channels in [Verified Contact Channels](#verified-contact-channels). Where a value is genuinely required but not yet available, use a clearly marked placeholder and track it as an open item.
 - **Repository-specific rules win.** A default must stay general enough to apply across different technologies. Anything that only makes sense for one repository belongs in that repository.
 - **Change discipline.** Changes to these files follow the conventions in [`CONTRIBUTING.md`](CONTRIBUTING.md), including the branch naming and commit message conventions described there.
 

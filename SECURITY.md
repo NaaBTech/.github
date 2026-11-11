@@ -45,10 +45,10 @@ A private report form is provided at [.github/VULNERABILITY_REPORT.yml](.github/
 
 If private reporting is not available for the repository in question:
 
-- Use the contact channel on the [official website](https://naabtech.ir) and ask for the security team. Mark the message as containing a security report so that it is routed appropriately.
+- Email **[info@naabtech.ir](mailto:info@naabtech.ir)** with the subject line `Security report — <repository>` and ask for the security team. Mark the message as containing a security report so that it is routed appropriately.
 - For issues affecting several repositories, contact the organization owners through [github.com/NaaBTech](https://github.com/NaaBTech).
 
-> **Open item.** NaaB Tech has not published a dedicated security contact address. Until one is designated, the channels above are the available routes. Publishing a monitored address such as `security@naabtech.ir` is an improvement this policy should adopt once the mailbox exists and is staffed.
+> **Open item.** `info@naabtech.ir` is NaaB Tech's published general contact address. A dedicated security mailbox — for example `security@naabtech.ir` — would route reports more reliably and should be designated once that mailbox exists and is staffed. Until then, mark the message clearly so that it reaches the security team rather than general enquiries.
 
 ### What to include
 
@@ -129,7 +129,7 @@ There is no bug bounty programme. Participation is voluntary and unpaid.
 - Authorised penetration tests and security assessments are performed under a written agreement that defines scope, timing, and test methods. Requests for such work should go through the website.
 - Port scanning, vulnerability scanning, and automated tooling against production systems are out of scope unless they are explicitly covered by an authorisation agreement.
 
-When you are not sure whether something is permitted, treat it as prohibited until it is confirmed in writing.
+When you are not sure whether something is permitted, treat it as prohibited until it is confirmed in writing. Questions about authorisation can be sent to [info@naabtech.ir](mailto:info@naabtech.ir).
 
 ---
 

@@ -21,7 +21,7 @@ This is the organization-level default. A repository may define its own support 
 | Report a security vulnerability | **Not** a public issue — follow [SECURITY.md](SECURITY.md) |
 | Discuss an idea before writing code | An issue, or **Discussions** if it is enabled |
 | Report abusive behaviour | See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) |
-| Request a service, quote, or contract | The [official website](https://naabtech.ir) |
+| Request a service, quote, or contract | The [official website](https://naabtech.ir) or [info@naabtech.ir](mailto:info@naabtech.ir) |
 
 ---
 
@@ -59,7 +59,7 @@ Security vulnerabilities are **never** reported through a public issue, pull req
 
 Use GitHub's private vulnerability reporting — the **Security** tab → **Report a vulnerability** — where it is enabled for the repository. Availability depends on how each repository is configured, so the option may not be present everywhere.
 
-If it is not available, follow the alternative routes described in [SECURITY.md](SECURITY.md). Before you publish anything publicly, allow time for the report to be reviewed and a fix to be prepared.
+If it is not available, email [info@naabtech.ir](mailto:info@naabtech.ir) with the subject line `Security report — <repository>`, or follow the other routes in [SECURITY.md](SECURITY.md). Before you publish anything publicly, allow time for the report to be reviewed and a fix to be prepared.
 
 ---
 
@@ -80,6 +80,20 @@ Documentation for a specific project lives with that project. If a repository's 
 
 ## Commercial Support and Business Inquiries
 
-Support that is contracted — including guaranteed response windows, dedicated engineering time, and service-level terms — is not provided through GitHub. Those requests are handled through the [official website](https://naabtech.ir).
+Support that is contracted — including guaranteed response windows, dedicated engineering time, and service-level terms — is not provided through GitHub. Those requests are handled through the [official website](https://naabtech.ir) or by email to [info@naabtech.ir](mailto:info@naabtech.ir).
 
-The same channel is used for enquiries about cybersecurity, software engineering, networking, and infrastructure services, and for partnership discussions. Providing details about your situation there makes the response more useful.
+The same channels are used for enquiries about cybersecurity, software engineering, networking, and infrastructure services, and for partnership discussions. Providing details about your situation there makes the response more useful.
+
+NaaB Tech's published channels are:
+
+| Channel | Link |
+| --- | --- |
+| Website | [naabtech.ir](https://naabtech.ir) |
+| Email | [info@naabtech.ir](mailto:info@naabtech.ir) |
+| LinkedIn | [company/naabtech](https://linkedin.com/company/naabtech) |
+| X | [@naabtech](https://x.com/naabtech) |
+| Telegram | [t.me/NaaBTech](https://t.me/NaaBTech) |
+| Instagram | [@naabtech.ir](https://instagram.com/naabtech.ir) |
+| GitHub | [github.com/NaaBTech](https://github.com/NaaBTech) |
+
+Public messaging channels are useful for questions that do not need confidentiality. They are not the right channel for a vulnerability report, and not a substitute for a support agreement.

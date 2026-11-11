@@ -108,11 +108,16 @@ Security issues are handled separately and in private. Follow the [security poli
 | Channel | Link |
 | --- | --- |
 | Website | [naabtech.ir](https://naabtech.ir) |
+| Email | [info@naabtech.ir](mailto:info@naabtech.ir) |
 | GitHub Organization | [github.com/NaaBTech](https://github.com/NaaBTech) |
+| LinkedIn | [company/naabtech](https://linkedin.com/company/naabtech) |
+| X | [@naabtech](https://x.com/naabtech) |
+| Telegram | [t.me/NaaBTech](https://t.me/NaaBTech) |
+| Instagram | [@naabtech.ir](https://instagram.com/naabtech.ir) |
 | Security reports | See [SECURITY.md](../SECURITY.md) — use private vulnerability reporting where it is enabled for the repository |
 | Code of Conduct | [CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md) |
 
-General, technical, and business inquiries are directed through the [official website](https://naabtech.ir).
+General, technical, and business inquiries are directed through the [official website](https://naabtech.ir) or by email to [info@naabtech.ir](mailto:info@naabtech.ir).
 
 ---
 
