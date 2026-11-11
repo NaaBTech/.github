@@ -23,26 +23,45 @@ jobs:
       - name: Check out the repository
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09  # v5
 
+      # The checks are skipped in any repository that does not carry the
+      # validation tooling, so this workflow is safe to copy or to run
+      # organization-wide.
+      - name: Look for the validation tooling
+        id: tooling
+        run: |
+          if [ -f scripts/validate_docs.py ] && [ -f .yamllint.yml ] && [ -f .markdownlint.json ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "Validation tooling is not present in this repository; skipping."
+          fi
+
       - name: Set up Python
+        if: steps.tooling.outputs.found == 'true'
         uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5
         with:
           python-version: '3.13'
 
       - name: Install validation tooling
+        if: steps.tooling.outputs.found == 'true'
         run: python -m pip install --disable-pip-version-check --requirement requirements-docs.txt
 
       - name: Check YAML syntax and style
+        if: steps.tooling.outputs.found == 'true'
         run: yamllint --strict --config-file .yamllint.yml .
 
       - name: Check file naming, form schema, and internal links
+        if: steps.tooling.outputs.found == 'true'
         run: python scripts/validate_docs.py .
 
       - name: Set up Node.js
+        if: steps.tooling.outputs.found == 'true'
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4
         with:
           node-version: '22'
 
       - name: Check Markdown formatting
+        if: steps.tooling.outputs.found == 'true'
         run: |
           npm install --global --no-fund --no-audit markdownlint-cli@0.45.0
           markdownlint --config .markdownlint.json "**/*.md"

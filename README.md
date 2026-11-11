@@ -41,15 +41,24 @@ Nothing here is application code. It is documentation and configuration, maintai
 │   │   ├── feature_request.yml        # Default issue form: feature request
 │   │   ├── question.yml               # Default issue form: question
 │   │   └── config.yml                 # Default issue template chooser
-│   └── VULNERABILITY_REPORT.yml       # Default private vulnerability report form
+│   ├── VULNERABILITY_REPORT.yml       # Default private vulnerability report form
+│   └── workflows/
+│       └── validate-docs.yml          # Validation workflow for this repository
 ├── CODE_OF_CONDUCT.md                 # Default code of conduct
 ├── CONTRIBUTING.md                    # Default contribution guidelines
 ├── PULL_REQUEST_TEMPLATE.md           # Default pull request template
 ├── REPOSITORY_ONBOARDING.md           # Repository setup and maintenance checklist
 ├── SECURITY.md                        # Default security policy
 ├── SUPPORT.md                         # Default support guidance
-└── README.md                          # This file
+├── README.md                          # This file
+├── scripts/
+│   └── validate_docs.py               # Offline validation used by the workflow
+├── .markdownlint.json                 # markdownlint configuration
+├── .yamllint.yml                      # yamllint configuration
+└── requirements-docs.txt              # Pinned validation tooling
 ```
+
+The files from `CODE_OF_CONDUCT.md` down to `README.md`, and everything under `profile/` and `.github/ISSUE_TEMPLATE/` and `.github/VULNERABILITY_REPORT.yml`, are organization defaults. The workflow, the `scripts/` directory, and the three tool configuration files are tooling for this repository alone and are not inherited by other repositories.
 
 ---
 
@@ -128,6 +137,7 @@ Anything not on this list must be confirmed with the organization owners before 
 - **No unapproved legal commitments.** Safe-harbour provisions, immunity, indemnification, response-time guarantees, and bug bounty terms are business and legal decisions. They require the organization owners' approval and, where appropriate, legal review before they are written into these files.
 - **Repository-specific rules win.** A default must stay general enough to apply across different technologies. Anything that only makes sense for one repository belongs in that repository.
 - **Change discipline.** Changes to these files follow the conventions in [`CONTRIBUTING.md`](CONTRIBUTING.md), including the branch naming and commit message conventions described there.
+- **Validate before merging.** The `Validate documentation` workflow checks YAML syntax, the GitHub form rules, required file naming, and internal links on every pull request. Its checks are offline, so a third-party outage cannot fail a documentation change. Run the same checks locally with `python scripts/validate_docs.py .`, `yamllint --strict --config-file .yamllint.yml .`, and `markdownlint --config .markdownlint.json "**/*.md"`.
 
 ---
 
