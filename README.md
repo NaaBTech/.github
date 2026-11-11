@@ -51,14 +51,25 @@ Nothing here is application code. It is documentation and configuration, maintai
 ├── SECURITY.md                        # Default security policy
 ├── SUPPORT.md                         # Default support guidance
 ├── README.md                          # This file
+├── schemas/
+│   ├── github-issue-forms.json        # Vendored JSON Schema for issue forms
+│   ├── github-issue-config.json       # Vendored JSON Schema for the chooser
+│   ├── github-vulnerability-report-form.json
+│   │                                   # Derived schema for vulnerability forms
+│   ├── PROVENANCE.json                # Where each schema came from, and when
+│   └── README.md                      # Schema sources and maintenance procedure
 ├── scripts/
-│   └── validate_docs.py               # Offline validation used by the workflow
+│   ├── validate_docs.py               # File, form, and link validation
+│   ├── test_validate_docs.py          # Negative tests for the validator
+│   └── update_schemas.py              # Refreshes the vendored schemas
 ├── .markdownlint.json                 # markdownlint configuration
 ├── .yamllint.yml                      # yamllint configuration
 └── requirements-docs.txt              # Pinned validation tooling
 ```
 
-The files from `CODE_OF_CONDUCT.md` down to `README.md`, and everything under `profile/` and `.github/ISSUE_TEMPLATE/` and `.github/VULNERABILITY_REPORT.yml`, are organization defaults. The workflow, the `scripts/` directory, and the three tool configuration files are tooling for this repository alone and are not inherited by other repositories.
+The files from `CODE_OF_CONDUCT.md` down to `README.md`, and everything under `profile/` and `.github/ISSUE_TEMPLATE/` and `.github/VULNERABILITY_REPORT.yml`, are organization defaults. The workflow, the `schemas/` directory, the `scripts/` directory, and the tool configuration files are tooling for this repository alone.
+
+**Workflows are not organization defaults.** GitHub inherits community health files between repositories; it does not inherit workflow files. The `validate-docs.yml` workflow runs only in `NaaBTech/.github`. Every project that needs CI has its own workflow in its own `.github/workflows/` directory — see [REPOSITORY_ONBOARDING.md](REPOSITORY_ONBOARDING.md).
 
 ---
 
@@ -137,7 +148,7 @@ Anything not on this list must be confirmed with the organization owners before 
 - **No unapproved legal commitments.** Safe-harbour provisions, immunity, indemnification, response-time guarantees, and bug bounty terms are business and legal decisions. They require the organization owners' approval and, where appropriate, legal review before they are written into these files.
 - **Repository-specific rules win.** A default must stay general enough to apply across different technologies. Anything that only makes sense for one repository belongs in that repository.
 - **Change discipline.** Changes to these files follow the conventions in [`CONTRIBUTING.md`](CONTRIBUTING.md), including the branch naming and commit message conventions described there.
-- **Validate before merging.** The `Validate documentation` workflow checks YAML syntax, the GitHub form rules, required file naming, and internal links on every pull request. Its checks are offline, so a third-party outage cannot fail a documentation change. Run the same checks locally with `python scripts/validate_docs.py .`, `yamllint --strict --config-file .yamllint.yml .`, and `markdownlint --config .markdownlint.json "**/*.md"`.
+- **Validate before merging.** The `Validate documentation` workflow checks YAML syntax, the GitHub form schemas, required file naming, and internal links on every pull request. The validation itself reads only files in this repository, so a third-party website outage cannot fail a documentation change. Installing the tooling still needs access to the Python and npm package registries, so a registry outage can prevent the workflow from completing setup. Run the same checks locally with `python scripts/validate_docs.py .`, `python scripts/test_validate_docs.py`, `yamllint --strict --config-file .yamllint.yml .`, and `markdownlint --config .markdownlint.json "**/*.md"`.
 
 ---
 

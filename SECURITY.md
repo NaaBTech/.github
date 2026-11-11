@@ -48,6 +48,22 @@ If the **Report a vulnerability** option is not present on a repository, use one
 
 A private report form is provided at [.github/VULNERABILITY_REPORT.yml](.github/VULNERABILITY_REPORT.yml) and is used where private reporting has been enabled. A repository may replace it with its own form.
 
+#### Enabling it across the organization
+
+Individual repositories can be configured one at a time, but organization owners can also manage this across the organization with **custom security configurations**. A custom security configuration is a named set of enablement settings for GitHub's security products, and it includes a private vulnerability reporting setting that can be enabled, disabled, or left unchanged.
+
+To create one: **Organization Settings → Security → Advanced Security → Configurations → New configuration → Custom configuration**. Apply it to existing repositories from the configuration's **Repositories** tab, and use **Use as default for newly created repositories** in its **Policy** section to cover repositories created afterwards.
+
+Three things to keep in mind:
+
+- **A default for newly created repositories does not backfill existing repositories.** Existing repositories have to be covered by applying the configuration to them explicitly.
+- **Private vulnerability reporting does not become available for private or internal repositories through this mechanism.** It remains a public-repository feature, and private or internal repositories need an agreed private reporting route instead.
+- **Verify the result.** Each repository's configuration status reflects the outcome of the operation, so confirm that the repositories you intended to cover are attached.
+
+> **Not enabled.** NaaB Tech has not created an organization-level security configuration. The settings described here are options an organization owner can configure, not a description of the current state.
+
+Reference: [Creating a custom security configuration](https://docs.github.com/en/code-security/how-tos/secure-at-scale/configure-organization-security/establish-complete-coverage/create-custom-configuration).
+
 ### Alternatives
 
 If private reporting is not available for the repository in question:
