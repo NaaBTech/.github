@@ -39,6 +39,8 @@ from validate_docs import (  # noqa: E402
     extract_link_targets,
     headings,
     parse_yaml_text,
+    repo_files,
+    required_file_status,
     resolve_within,
     run_checks,
     split_link_target,
@@ -871,6 +873,22 @@ def run():
     finally:
         shutil.rmtree(temp_root, ignore_errors=True)
 
+    behaviour += 1
+    temp_root = make_temp_repo(files={
+        "doc.md": "# Title Here\n\n## A Heading With Punctuation!\n\n### Usage\n\n### Usage\n",
+    })
+    try:
+        anchors = headings(os.path.join(temp_root, "doc.md"))
+        expected = {"title-here", "a-heading-with-punctuation", "usage", "usage-1"}
+        missing = expected - anchors
+        if missing:
+            failures.append(
+                f"markdown anchors: the heading slugs {sorted(missing)} were not produced, "
+                f"got {sorted(anchors)}"
+            )
+    finally:
+        shutil.rmtree(temp_root, ignore_errors=True)
+
     # ------------------------------------------------------------------
     # Behaviour cases: the schema refresh is transactional.
     # ------------------------------------------------------------------
@@ -928,64 +946,6 @@ def run():
         shutil.rmtree(temp_root, ignore_errors=True)
 
     behaviour += 1
-    temp_root = make_temp_repo()
-    try:
-        artifacts = {"a.json": b'{"a": 1}\n', "b.json": b'{"b": 2}\n', "c.json": b'{"c": 3}\n'}
-        target_dir = os.path.join(temp_root, "target")
-        os.makedirs(target_dir)
-        for name in artifacts:
-            with open(os.path.join(target_dir, name), "wb") as handle:
-                handle.write(b'{"original": true}\n')
-        staging = os.path.join(temp_root, "staging")
-        os.makedirs(staging)
-        update_schemas.stage_artifacts(artifacts, staging)
-
-        original_replace = os.replace
-        calls = {"count": 0}
-
-        def failing_replace(source, destination, *args, **kwargs):
-            calls["count"] += 1
-            if calls["count"] == 2:
-                raise OSError("injected promotion failure")
-            return original_replace(source, destination, *args, **kwargs)
-
-        os.replace = failing_replace
-        try:
-            update_schemas.promote(artifacts, staging, target_dir)
-        except OSError:
-            pass
-        else:
-            failures.append("schema refresh: the injected promotion failure did not raise")
-        finally:
-            os.replace = original_replace
-
-        for name in artifacts:
-            with open(os.path.join(target_dir, name), "rb") as handle:
-                content = handle.read()
-            if content != b'{"original": true}\n':
-                failures.append(
-                    f"schema refresh: rollback did not restore {name}, it contains {content!r}"
-                )
-    finally:
-        shutil.rmtree(temp_root, ignore_errors=True)
-
-    behaviour += 1
-    temp_root = make_temp_repo(files={
-        "doc.md": "# Title Here\n\n## A Heading With Punctuation!\n\n### Usage\n\n### Usage\n",
-    })
-    try:
-        anchors = headings(os.path.join(temp_root, "doc.md"))
-        expected = {"title-here", "a-heading-with-punctuation", "usage", "usage-1"}
-        missing = expected - anchors
-        if missing:
-            failures.append(
-                f"markdown anchors: the heading slugs {sorted(missing)} were not produced, "
-                f"got {sorted(anchors)}"
-            )
-    finally:
-        shutil.rmtree(temp_root, ignore_errors=True)
-
-    behaviour += 1
     downloads = {
         name: open(os.path.join(SCHEMA_SOURCE_DIR, name), "rb").read()
         for name in ("github-issue-forms.json", "github-issue-config.json")
@@ -1006,6 +966,189 @@ def run():
             failures.append(
                 f"schema refresh: rebuilding {name} did not reproduce the vendored file"
             )
+
+    def stage_for(temp_root, artifacts):
+        staging = os.path.join(temp_root, "staging")
+        os.makedirs(staging, exist_ok=True)
+        update_schemas.stage_artifacts(artifacts, staging)
+        return staging
+
+    def seed_target(temp_root, artifacts, original=b'{"original": true}\n'):
+        target_dir = os.path.join(temp_root, "target")
+        os.makedirs(target_dir, exist_ok=True)
+        for name in artifacts:
+            with open(os.path.join(target_dir, name), "wb") as handle:
+                handle.write(original)
+        return target_dir
+
+    def inject_promotion_failure(fail_at):
+        original_replace = os.replace
+        state = {"count": 0, "failed": False}
+
+        def failing_replace(source, destination, *args, **kwargs):
+            state["count"] += 1
+            if state["count"] == fail_at and not state["failed"]:
+                state["failed"] = True
+                raise OSError("injected promotion failure")
+            return original_replace(source, destination, *args, **kwargs)
+
+        return original_replace, failing_replace
+
+    # Failure on the second promotion, and on a later one.
+    for fail_at, label in ((2, "the second promotion"), (4, "a subsequent promotion")):
+        behaviour += 1
+        temp_root = make_temp_repo()
+        try:
+            artifacts = {f"f{i}.json": f'{{"v": {i}}}\n'.encode() for i in range(5)}
+            target_dir = seed_target(temp_root, artifacts)
+            staging = stage_for(temp_root, artifacts)
+            original_replace, failing_replace = inject_promotion_failure(fail_at)
+            os.replace = failing_replace
+            try:
+                update_schemas.promote(artifacts, staging, target_dir)
+            except OSError:
+                pass
+            else:
+                failures.append(f"schema refresh: the injected failure at {label} did not raise")
+            finally:
+                os.replace = original_replace
+            for name in artifacts:
+                with open(os.path.join(target_dir, name), "rb") as handle:
+                    content = handle.read()
+                if content != b'{"original": true}\n':
+                    failures.append(
+                        f"schema refresh: rollback after a failure at {label} did not restore {name}"
+                    )
+        finally:
+            shutil.rmtree(temp_root, ignore_errors=True)
+
+    # Failure while restoring one backup, and while restoring several.
+    for promote_count, label in ((2, "one backup"), (4, "multiple backups")):
+        behaviour += 1
+        temp_root = make_temp_repo()
+        try:
+            artifacts = {f"f{i}.json": f'{{"v": {i}}}\n'.encode() for i in range(5)}
+            target_dir = seed_target(temp_root, artifacts)
+            staging = stage_for(temp_root, artifacts)
+            backup_dir = os.path.join(target_dir, update_schemas.BACKUP_DIR_NAME)
+
+            original_replace, failing_replace = inject_promotion_failure(promote_count + 1)
+            original_copy2 = shutil.copy2
+
+            def failing_copy2(source, destination, *args, **kwargs):
+                if update_schemas.BACKUP_DIR_NAME in str(source):
+                    raise OSError("injected restore failure")
+                return original_copy2(source, destination, *args, **kwargs)
+
+            os.replace = failing_replace
+            shutil.copy2 = failing_copy2
+            raised = None
+            try:
+                update_schemas.promote(artifacts, staging, target_dir)
+            except Exception as exc:
+                raised = exc
+            finally:
+                os.replace = original_replace
+                shutil.copy2 = original_copy2
+
+            if not isinstance(raised, update_schemas.RollbackError):
+                failures.append(
+                    f"schema refresh: a failure while restoring {label} did not raise "
+                    f"RollbackError, got {raised!r}"
+                )
+            elif update_schemas.BACKUP_DIR_NAME not in str(raised):
+                failures.append(
+                    f"schema refresh: the recovery location was not reported for {label}: {raised}"
+                )
+            # The critical assertion: a backup that could not be restored is
+            # never deleted, because it is the only recoverable copy.
+            survivors = []
+            for name in artifacts:
+                backup = os.path.join(backup_dir, name)
+                if os.path.exists(backup):
+                    survivors.append((name, backup))
+            if not survivors:
+                failures.append(
+                    "schema refresh: the recoverable copies were destroyed after a failed "
+                    f"rollback of {label}"
+                )
+            for name, backup in survivors:
+                with open(backup, "rb") as handle:
+                    content = handle.read()
+                if content != b'{"original": true}\n':
+                    failures.append(
+                        f"schema refresh: the surviving backup for {name} is not the original file"
+                    )
+            # Recovery after a failed rollback: the surviving backup restores
+            # the original file.
+            if survivors:
+                name, backup = survivors[0]
+                target = os.path.join(target_dir, name)
+                with open(backup, "rb") as handle:
+                    original_bytes = handle.read()
+                with open(target, "wb") as handle:
+                    handle.write(original_bytes)
+                with open(target, "rb") as handle:
+                    if handle.read() != b'{"original": true}\n':
+                        failures.append(
+                            f"schema refresh: recovery after a failed rollback did not restore {name}"
+                        )
+        finally:
+            shutil.rmtree(temp_root, ignore_errors=True)
+
+    # A failure while removing the backups after a successful promotion is
+    # reported but does not fail the promotion.
+    behaviour += 1
+    temp_root = make_temp_repo()
+    try:
+        artifacts = {f"f{i}.json": f'{{"v": {i}}}\n'.encode() for i in range(3)}
+        target_dir = seed_target(temp_root, artifacts)
+        staging = stage_for(temp_root, artifacts)
+        original_remove = os.remove
+
+        def failing_remove(path, *args, **kwargs):
+            if update_schemas.BACKUP_DIR_NAME in str(path):
+                raise OSError("injected cleanup failure")
+            return original_remove(path, *args, **kwargs)
+
+        os.remove = failing_remove
+        try:
+            update_schemas.promote(artifacts, staging, target_dir)
+        except Exception as exc:
+            failures.append(f"schema refresh: a backup cleanup failure failed the promotion: {exc}")
+        finally:
+            os.remove = original_remove
+        for index, name in enumerate(sorted(artifacts)):
+            with open(os.path.join(target_dir, name), "rb") as handle:
+                content = handle.read()
+            if content != f'{{"v": {index}}}\n'.encode():
+                failures.append(f"schema refresh: the promotion did not write {name}")
+    finally:
+        shutil.rmtree(temp_root, ignore_errors=True)
+
+    # A completely successful refresh leaves no temporary or backup files.
+    behaviour += 1
+    temp_root = make_temp_repo()
+    try:
+        artifacts = {f"f{i}.json": f'{{"v": {i}}}\n'.encode() for i in range(3)}
+        target_dir = seed_target(temp_root, artifacts)
+        staging = stage_for(temp_root, artifacts)
+        update_schemas.promote(artifacts, staging, target_dir)
+        leftovers = []
+        for dirpath, dirnames, filenames in os.walk(target_dir):
+            for name in filenames:
+                if update_schemas.BACKUP_DIR_NAME in dirpath or name.endswith(".naabtech-restore"):
+                    leftovers.append(os.path.join(dirpath, name))
+        if leftovers:
+            failures.append(
+                f"schema refresh: a successful refresh left files behind: {leftovers}"
+            )
+        if os.path.exists(os.path.join(target_dir, update_schemas.BACKUP_DIR_NAME)):
+            failures.append(
+                "schema refresh: the backup directory survived a completely successful refresh"
+            )
+    finally:
+        shutil.rmtree(temp_root, ignore_errors=True)
 
     total = negative + positive + behaviour
     print(

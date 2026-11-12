@@ -474,14 +474,82 @@ def headings(path):
     return anchors
 
 
+# Directories that are never part of the validated content.
+EXCLUDED_DIRECTORIES = {".git", "node_modules", "__pycache__", ".naabtech-backups"}
+
+
 def repo_files(root, suffixes):
+    """Enumerate files for validation, rejecting anything outside the repository.
+
+    A symbolic link whose canonical destination is outside the repository is
+    never opened and never enters the inventory. Symlinked directories are
+    followed only when they resolve inside the repository, and a set of visited
+    real paths stops a cycle from causing unbounded recursion.
+
+    Returns (files, rejected). ``rejected`` holds (repository-relative path,
+    reason) for everything that was skipped.
+    """
+    canonical_root = os.path.realpath(root)
     found = []
-    for dirpath, dirnames, filenames in os.walk(root):
-        dirnames[:] = [d for d in dirnames if d not in (".git", "node_modules", "__pycache__")]
-        for name in filenames:
-            if name.endswith(suffixes):
-                found.append(os.path.join(dirpath, name))
-    return sorted(found)
+    rejected = []
+    visited = set()
+
+    def relative(path):
+        return os.path.relpath(path, root).replace(os.sep, "/")
+
+    def walk(directory):
+        real_dir = os.path.realpath(directory)
+        if real_dir in visited:
+            return
+        visited.add(real_dir)
+        try:
+            entries = sorted(os.listdir(directory))
+        except OSError:
+            return
+        for name in entries:
+            path = os.path.join(directory, name)
+            if os.path.islink(path):
+                target = os.path.realpath(path)
+                if not _is_within(canonical_root, target):
+                    rejected.append((relative(path), "points outside the repository"))
+                    continue
+                if not os.path.exists(target):
+                    rejected.append((relative(path), "points to a target that does not exist"))
+                    continue
+                if os.path.isdir(target):
+                    walk(target)
+                    continue
+                if name.endswith(suffixes):
+                    found.append(path)
+                continue
+            if name in EXCLUDED_DIRECTORIES and os.path.isdir(path):
+                continue
+            if os.path.isdir(path):
+                walk(path)
+            elif name.endswith(suffixes):
+                found.append(path)
+
+    walk(root)
+    return sorted(found), sorted(set(rejected))
+
+
+def required_file_status(root, relative):
+    """Return (ok, reason) for a required file.
+
+    A required file that is a symbolic link pointing outside the repository is
+    reported as unusable and is never opened.
+    """
+    path = os.path.join(root, relative.replace("/", os.sep))
+    if not os.path.lexists(path):
+        return False, "is missing"
+    if os.path.islink(path):
+        canonical_root = os.path.realpath(root)
+        target = os.path.realpath(path)
+        if not _is_within(canonical_root, target):
+            return False, "is a symbolic link pointing outside the repository"
+        if not os.path.exists(target):
+            return False, "is a symbolic link whose target does not exist"
+    return True, ""
 
 
 def extract_link_targets(text):
@@ -560,15 +628,24 @@ def run_checks(root):
     schemas = load_schemas(root)
 
     for name, purpose in REQUIRED_FILES.items():
-        if not os.path.exists(os.path.join(root, name.replace("/", os.sep))):
-            errors.append(f"missing required file: {name} ({purpose})")
+        ok, reason = required_file_status(root, name)
+        if not ok:
+            if reason == "is missing":
+                errors.append(f"missing required file: {name} ({purpose})")
+            else:
+                errors.append(f"required file: {name} ({purpose}) {reason}")
 
     for name, purpose in REQUIRED_TOOLING_FILES.items():
-        if not os.path.exists(os.path.join(root, name.replace("/", os.sep))):
-            errors.append(f"missing required tooling file: {name} ({purpose})")
+        ok, reason = required_file_status(root, name)
+        if not ok:
+            if reason == "is missing":
+                errors.append(f"missing required tooling file: {name} ({purpose})")
+            else:
+                errors.append(f"required tooling file: {name} ({purpose}) {reason}")
 
     parsed = {}
-    for path in repo_files(root, (".yml", ".yaml")):
+    yaml_files, yaml_rejected = repo_files(root, (".yml", ".yaml"))
+    for path in yaml_files:
         name = os.path.relpath(path, root).replace(os.sep, "/")
         with open(path, encoding="utf-8") as handle:
             text = handle.read()
@@ -577,6 +654,8 @@ def run_checks(root):
             errors.append(f"{name}: {error}")
             continue
         parsed[name] = data
+    for name, reason in yaml_rejected:
+        errors.append(f"{name}: was not validated because the file {reason}")
 
     validated_forms = set()
 
@@ -650,10 +729,14 @@ def run_checks(root):
             f"label '{label}' is declared for the organization forms but no form applies it"
         )
 
-    markdown_files = {
-        os.path.relpath(path, root).replace(os.sep, "/"): path
-        for path in repo_files(root, (".md",))
-    }
+    markdown_files = {}
+    markdown_rejected = []
+    markdown_paths, markdown_rejected = repo_files(root, (".md",))
+    for path in markdown_paths:
+        name = os.path.relpath(path, root).replace(os.sep, "/")
+        markdown_files[name] = path
+    for name, reason in markdown_rejected:
+        errors.append(f"{name}: was not validated because the file {reason}")
     linked = set()
     for name, path in markdown_files.items():
         with open(path, encoding="utf-8") as handle:

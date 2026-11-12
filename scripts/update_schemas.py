@@ -97,6 +97,19 @@ class UpdateError(RuntimeError):
     """Raised when a refresh cannot be completed safely."""
 
 
+class RollbackError(UpdateError):
+    """Raised when a promotion failed and the rollback could not fully restore.
+
+    The surviving backups are the only recoverable copies of the original
+    files, and their location is reported in the message.
+    """
+
+
+# Where the original files are kept while a promotion is in progress. A
+# backup that could not be restored is left here on purpose.
+BACKUP_DIR_NAME = ".naabtech-backups"
+
+
 def download(url):
     request = urllib.request.Request(url, headers={"User-Agent": "naabtech-docs-audit"})
     with urllib.request.urlopen(request, timeout=60) as response:
@@ -314,37 +327,94 @@ def promote(artifacts, staging_dir, target_dir):
     """Move the staged files into place, rolling back on failure.
 
     Each file is replaced individually, so a failure part way through can leave
-    a mixture. The previous content is restored in that case, so the schemas
-    and the provenance record always agree with each other.
+    a mixture. The previous content of every file is kept in a backup
+    directory until the promotion has fully succeeded.
+
+    If the promotion fails, the backups are restored in reverse order and the
+    original artifact set is left byte-for-byte unchanged. The restoration
+    itself is failure-safe: a backup that cannot be restored is *not* deleted,
+    because it is the only remaining recoverable copy of that file, and its
+    location is reported instead.
+
+    This is an exception rollback, not a filesystem transaction. A crash or a
+    power loss between two replacements can still leave a mixture, and the
+    backup directory is what makes that recoverable by hand.
     """
-    backups = {}
-    promoted = []
+    backup_dir = os.path.join(target_dir, BACKUP_DIR_NAME)
+    backups = {}        # name -> backup path, or None when the file is new
+    promoted = []        # names that were successfully replaced
+    restored = set()     # names whose original content is back in place
+    failures = []        # (name, error) for backups that could not be restored
+    succeeded = False
+
     try:
         for name in artifacts:
             source = os.path.join(staging_dir, name.replace("/", os.sep))
             target = os.path.join(target_dir, name.replace("/", os.sep))
             os.makedirs(os.path.dirname(target), exist_ok=True)
             if os.path.exists(target):
-                backup = target + ".naabtech-backup"
+                backup = os.path.join(backup_dir, name.replace("/", os.sep))
+                os.makedirs(os.path.dirname(backup), exist_ok=True)
                 shutil.copy2(target, backup)
                 backups[name] = backup
             else:
                 backups[name] = None
             os.replace(source, target)
             promoted.append(name)
-    except Exception:
-        for name in promoted:
+        succeeded = True
+    except Exception as promotion_error:
+        for name in reversed(promoted):
             target = os.path.join(target_dir, name.replace("/", os.sep))
             backup = backups.get(name)
-            if backup and os.path.exists(backup):
-                shutil.copy2(backup, target)
-            elif os.path.exists(target):
-                os.remove(target)
+            try:
+                if backup is not None and os.path.exists(backup):
+                    # Copy to a temporary name and move it into place, so the
+                    # destination is never left partially overwritten.
+                    restore = target + ".naabtech-restore"
+                    shutil.copy2(backup, restore)
+                    os.replace(restore, target)
+                    restored.add(name)
+                elif os.path.exists(target):
+                    os.remove(target)
+                    restored.add(name)
+            except Exception as rollback_error:
+                failures.append((name, rollback_error))
+                # The backup is the only recoverable copy of this file. It is
+                # deliberately kept, and its location is reported.
+                sys.stderr.write(
+                    f"update_schemas: could not restore {name}: {rollback_error}\n"
+                    f"update_schemas: the recoverable copy is kept at {backup}\n"
+                )
+        if failures:
+            raise RollbackError(
+                f"promotion failed ({promotion_error}) and {len(failures)} file(s) could not "
+                "be restored: " + ", ".join(name for name, _ in failures)
+                + f". Recoverable copies are kept under {backup_dir}"
+            ) from promotion_error
         raise
     finally:
-        for backup in backups.values():
-            if backup and os.path.exists(backup):
+        for name, backup in backups.items():
+            if not backup or not os.path.exists(backup):
+                continue
+            # A backup is removed when the file was restored, when the file
+            # was never replaced, or when the whole promotion succeeded. A
+            # backup that was not restored is the only recoverable copy and
+            # is never removed.
+            if not (succeeded or name in restored or name not in promoted):
+                continue
+            try:
                 os.remove(backup)
+            except OSError as cleanup_error:
+                sys.stderr.write(
+                    f"update_schemas: could not remove the backup for {name}: {cleanup_error}\n"
+                )
+        if not failures:
+            # The directory is removed only when it is empty, so a stale
+            # recovery copy from an earlier failed run is never destroyed.
+            try:
+                os.rmdir(backup_dir)
+            except OSError:
+                pass
 
 
 def refresh():

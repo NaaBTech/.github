@@ -93,9 +93,13 @@ The script:
 6. Writes the whole artifact set into a temporary staging directory beside this one.
 7. Verifies the staged files against the artifacts that were built, then promotes them into place.
 
-**The refresh is transactional.** Nothing is written to the live schema directory until every download, patch, derivation and hash has succeeded and the staged files have been verified. If promotion fails part way through, the previous content of every file is restored, so the schemas and the provenance record never disagree with each other. The staging directory is removed whether the refresh succeeds or fails.
+**The refresh is transactional against exceptions.** Nothing is written to the live schema directory until every download, patch, derivation and hash has succeeded and the staged files have been verified. If promotion fails part way through, the previous content of every file is restored and the original artifact set is left byte-for-byte unchanged. The staging directory is removed whether the refresh succeeds or fails.
 
-The guarantee this provides is the one a filesystem can give: the set of files is consistent once the command returns, and an unsuccessful run leaves the previous set untouched. It is not a filesystem-level transaction — the files are replaced one at a time — so the rollback in step 7 is what makes the result consistent, and it is covered by a test.
+**What that guarantee is, and what it is not.** The files are replaced one at a time, so the refresh is **not** a filesystem-level transaction. A crash or a power loss between two replacements can still leave a mixture of old and new schemas with stale provenance. What protects against that is the backup directory `schemas/.naabtech-backups/`: the original content of every file is kept there until the promotion has fully succeeded, and it is removed only when it is empty, so a stale recovery copy from an earlier failed run is never destroyed.
+
+The rollback is itself failure-safe. If a backup cannot be restored, that backup is **not** deleted — it is the only remaining recoverable copy of that file — and its path is reported on standard error and in the raised error. The failed files are named, and the recoverable copies are left in one clearly identified place.
+
+The staging and the promotion are covered by failure-injection tests, including a forced failure during promotion that proves every file is restored, and a forced failure during restoration that proves the recoverable copy survives.
 
 After refreshing:
 

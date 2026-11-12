@@ -4,3 +4,8 @@ __pycache__/
 
 # Node.js dependencies installed by npm.
 node_modules/
+
+# Backups kept by scripts/update_schemas.py when a promotion fails. A backup
+# that could not be restored is deliberately left here: it is the only
+# recoverable copy of that file.
+schemas/.naabtech-backups/
