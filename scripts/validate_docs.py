@@ -644,7 +644,10 @@ def run_checks(root):
                 errors.append(f"required tooling file: {name} ({purpose}) {reason}")
 
     parsed = {}
+    rejected = {}
     yaml_files, yaml_rejected = repo_files(root, (".yml", ".yaml"))
+    for name, reason in yaml_rejected:
+        rejected[name] = reason
     for path in yaml_files:
         name = os.path.relpath(path, root).replace(os.sep, "/")
         with open(path, encoding="utf-8") as handle:
@@ -654,8 +657,17 @@ def run_checks(root):
             errors.append(f"{name}: {error}")
             continue
         parsed[name] = data
-    for name, reason in yaml_rejected:
+
+    markdown_files = {}
+    markdown_paths, markdown_rejected = repo_files(root, (".md",))
+    for name, reason in markdown_rejected:
+        rejected[name] = reason
+    for path in markdown_paths:
+        name = os.path.relpath(path, root).replace(os.sep, "/")
+        markdown_files[name] = path
+    for name, reason in sorted(rejected.items()):
         errors.append(f"{name}: was not validated because the file {reason}")
+    linked = set()
 
     validated_forms = set()
 
@@ -735,8 +747,6 @@ def run_checks(root):
     for path in markdown_paths:
         name = os.path.relpath(path, root).replace(os.sep, "/")
         markdown_files[name] = path
-    for name, reason in markdown_rejected:
-        errors.append(f"{name}: was not validated because the file {reason}")
     linked = set()
     for name, path in markdown_files.items():
         with open(path, encoding="utf-8") as handle:

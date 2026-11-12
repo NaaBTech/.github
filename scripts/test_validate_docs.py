@@ -890,6 +890,142 @@ def run():
         shutil.rmtree(temp_root, ignore_errors=True)
 
     # ------------------------------------------------------------------
+    # Behaviour cases: file discovery rejects links that leave the repository.
+    # ------------------------------------------------------------------
+    discovery_root = make_temp_repo(files={
+        "README.md": "# Root\n",
+        "docs/normal.md": "# Normal\n",
+        ".github/ISSUE_TEMPLATE/forms.yml": (
+            "name: Form\ndescription: A form.\nbody:\n  - type: input\n    id: x\n"
+            "    attributes:\n      label: X\n"
+        ),
+    })
+    outside_root = tempfile.mkdtemp()
+    with open(os.path.join(outside_root, "external.md"), "w", encoding="utf-8") as handle:
+        handle.write("# External\n")
+    with open(os.path.join(outside_root, "external.yml"), "w", encoding="utf-8") as handle:
+        handle.write("name: External\n")
+
+    symlink_cases = []
+    try:
+        os.symlink(os.path.join(outside_root, "external.md"),
+                    os.path.join(discovery_root, "external.md"))
+        os.symlink(os.path.join(outside_root, "external.yml"),
+                    os.path.join(discovery_root, "external.yml"))
+        os.symlink(os.path.join(discovery_root, "docs", "normal.md"),
+                    os.path.join(discovery_root, "internal.md"))
+        os.symlink(os.path.join(discovery_root, "docs", "normal.md"),
+                    os.path.join(discovery_root, "alias.md"))
+        os.symlink(os.path.join(outside_root, "missing.md"),
+                    os.path.join(discovery_root, "broken.md"))
+        os.makedirs(os.path.join(discovery_root, "linkdir"))
+        os.symlink(os.path.join(discovery_root, "docs"),
+                    os.path.join(discovery_root, "linkdir", "docs"))
+        symlink_cases = ["external_md", "external_yml", "internal_md", "alias_md",
+                          "broken_md", "linkdir", "required_symlink"]
+    except (OSError, NotImplementedError, AttributeError) as exc:
+        print(f"  skipped 6 discovery symlink case(s): symbolic links are not available here "
+              f"({type(exc).__name__}: {exc})")
+
+    behaviour += 1
+    files, rejected = repo_files(discovery_root, (".md",))
+    names = {os.path.relpath(path, discovery_root).replace(os.sep, "/") for path in files}
+    if "docs/normal.md" not in names:
+        failures.append(f"file discovery: a normal Markdown file was not found, got {sorted(names)}")
+
+    behaviour += 1
+    files, rejected = repo_files(discovery_root, (".yml",))
+    names = {os.path.relpath(path, discovery_root).replace(os.sep, "/") for path in files}
+    if ".github/ISSUE_TEMPLATE/forms.yml" not in names:
+        failures.append(f"file discovery: a normal YAML file was not found, got {sorted(names)}")
+
+    if symlink_cases:
+        behaviour += 1
+        files, rejected = repo_files(discovery_root, (".md",))
+        names = {os.path.relpath(path, discovery_root).replace(os.sep, "/") for path in files}
+        rejected_names = {name for name, _reason in rejected}
+        if "external.md" in names:
+            failures.append("file discovery: an external Markdown symlink entered the inventory")
+        if "external.md" not in rejected_names:
+            failures.append(
+                f"file discovery: the external Markdown symlink was not reported, got {rejected}"
+            )
+
+        behaviour += 1
+        files, rejected = repo_files(discovery_root, (".yml",))
+        names = {os.path.relpath(path, discovery_root).replace(os.sep, "/") for path in files}
+        rejected_names = {name for name, _reason in rejected}
+        if "external.yml" in names:
+            failures.append("file discovery: an external YAML symlink entered the inventory")
+        if "external.yml" not in rejected_names:
+            failures.append(
+                f"file discovery: the external YAML symlink was not reported, got {rejected}"
+            )
+
+        behaviour += 1
+        files, rejected = repo_files(discovery_root, (".md",))
+        names = {os.path.relpath(path, discovery_root).replace(os.sep, "/") for path in files}
+        if "internal.md" not in names:
+            failures.append("file discovery: an internal Markdown symlink was not accepted")
+        if "alias.md" not in names:
+            failures.append("file discovery: a second internal symlink was not accepted")
+
+        behaviour += 1
+        files, rejected = repo_files(discovery_root, (".md",))
+        rejected_names = {name for name, _reason in rejected}
+        if "broken.md" not in rejected_names:
+            failures.append(
+                f"file discovery: a symlink with a missing target was not reported, got {rejected}"
+            )
+
+        behaviour += 1
+        files, rejected = repo_files(discovery_root, (".md",))
+        names = {os.path.relpath(path, discovery_root).replace(os.sep, "/") for path in files}
+        if "linkdir/docs/normal.md" not in names:
+            failures.append(
+                "file discovery: a symlinked directory inside the repository was not followed, "
+                f"got {sorted(names)}"
+            )
+
+        behaviour += 1
+        # A required file that is a symlink outside the repository must be
+        # reported as unusable rather than accepted.
+        os.symlink(os.path.join(outside_root, "external.md"),
+                    os.path.join(discovery_root, "REQUIRED.md"))
+        ok, reason = required_file_status(discovery_root, "REQUIRED.md")
+        if ok or "outside" not in reason:
+            failures.append(
+                f"required file: an external symlink was accepted, got {(ok, reason)}"
+            )
+
+    shutil.rmtree(discovery_root, ignore_errors=True)
+    shutil.rmtree(outside_root, ignore_errors=True)
+
+    behaviour += 1
+    # The content behind an external symlink must never be read by the
+    # validator. A file whose content would break YAML parsing proves it.
+    outside_root = tempfile.mkdtemp()
+    with open(os.path.join(outside_root, "poison.yml"), "w", encoding="utf-8") as handle:
+        handle.write("name: POISON-MARKER\ndescription: [unclosed\n")
+    discovery_root = make_temp_repo(files={"README.md": "# Root\n"})
+    try:
+        os.symlink(os.path.join(outside_root, "poison.yml"),
+                    os.path.join(discovery_root, "poison.yml"))
+        _files, rejected = repo_files(discovery_root, (".yml",))
+        rejected_names = {name for name, _reason in rejected}
+        if "poison.yml" not in rejected_names:
+            failures.append(
+                f"file discovery: an external symlink was not rejected, got {rejected}"
+            )
+        errors, _warnings = run_checks(discovery_root)
+        if any("POISON-MARKER" in message for message in errors):
+            failures.append("file discovery: the content behind an external symlink was read")
+    except (OSError, NotImplementedError, AttributeError):
+        print("  skipped 1 external-content case(s): symbolic links are not available here")
+    shutil.rmtree(discovery_root, ignore_errors=True)
+    shutil.rmtree(outside_root, ignore_errors=True)
+
+    # ------------------------------------------------------------------
     # Behaviour cases: the schema refresh is transactional.
     # ------------------------------------------------------------------
     good_downloads = {
