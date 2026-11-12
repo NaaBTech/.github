@@ -19,18 +19,42 @@ Usage:
 """
 
 import os
+import shutil
 import sys
+import tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+SCHEMA_SOURCE_DIR = os.path.abspath(
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "schemas")
+)
 
 from validate_docs import (  # noqa: E402
     EXPECTED_LABELS,
     ISSUE_FORM_SCHEMA,
     VULNERABILITY_FORM_SCHEMA,
+    boolean_key_errors,
     parse_yaml_text,
+    resolve_within,
+    run_checks,
     validate_config_document,
     validate_form_document,
 )
+
+# A workflow's `on:` key is parsed as a boolean by YAML 1.1 readers and is
+# perfectly legal there. The boolean-key rule must therefore not be applied to
+# workflow files. This is the control for that scoping.
+WORKFLOW_WITH_ON_KEY = """
+name: Workflow
+on:
+  push:
+    branches: [main]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo hello
+"""
 
 VALID_ISSUE_FORM = """
 name: Valid form
@@ -327,6 +351,36 @@ description: Has no body at all.
 """,
         "mapping",
     ),
+    (
+        "key that YAML parses as a boolean",
+        "issue",
+        """
+name: Boolean key
+description: Has a key that YAML 1.1 readers parse as a boolean.
+body:
+  - type: input
+    id: subject
+    attributes:
+      label: Subject
+    yes: 1
+""",
+        "parsed as a boolean by YAML",
+    ),
+    (
+        "quoted key that YAML would parse as a boolean",
+        "issue",
+        """
+name: Quoted boolean key
+description: Has a quoted key that YAML 1.1 readers parse as a boolean.
+body:
+  - type: input
+    id: subject
+    attributes:
+      label: Subject
+    "on": 1
+""",
+        "parsed as a boolean by YAML",
+    ),
 ]
 
 # (case name, YAML text, expected substring)
@@ -340,6 +394,20 @@ body:
   - type: input
 """,
         "YAML parse error",
+    ),
+    (
+        "duplicate YAML keys",
+        """
+name: First name
+description: Has the same key twice.
+name: Second name
+body:
+  - type: input
+    id: subject
+    attributes:
+      label: Subject
+""",
+        "duplicate key",
     ),
 ]
 
@@ -387,6 +455,26 @@ def run():
         if errors:
             failures.append(f"{name}: expected no errors, got {errors}")
 
+    # A workflow's `on:` key must never be reported as a boolean key. The rule
+    # is scoped to the files listed in FORM_FILES, so a workflow is checked
+    # through run_checks rather than through the rule in isolation.
+    positive += 1
+    data, error = parse_yaml_text(WORKFLOW_WITH_ON_KEY)
+    if error:
+        failures.append(f"workflow with an 'on:' key: the fixture itself did not parse: {error}")
+    elif True not in data:
+        failures.append(
+            "workflow with an 'on:' key: the fixture no longer exercises a boolean key"
+        )
+
+    # A link target that leaves the repository must be rejected.
+    positive += 1
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+    if resolve_within(repo_root, "../../../../Windows/win.ini") is not None:
+        failures.append("link escaping the repository: expected the target to be rejected")
+    if resolve_within(repo_root, "CONTRIBUTING.md") is None:
+        failures.append("link inside the repository: expected the target to be accepted")
+
     for name, kind, text, expected in FORM_CASES:
         negative += 1
         data, error = parse_yaml_text(text)
@@ -419,6 +507,51 @@ def run():
             failures.append(f"{name}: expected an error, but the validator reported none")
         elif not any(expected.lower() in message.lower() for message in errors):
             failures.append(f"{name}: expected an error containing '{expected}', got {errors}")
+
+    # The warning tier: a Markdown file that nothing links to is reported as a
+    # warning, and a warning alone must not be reported as an error. The same
+    # temporary repository also carries a workflow whose `on:` key YAML parses
+    # as a boolean, which must not be reported at all.
+    positive += 1
+    with tempfile.TemporaryDirectory() as temp_root:
+        os.makedirs(os.path.join(temp_root, "schemas"))
+        os.makedirs(os.path.join(temp_root, ".github", "workflows"))
+        for schema_name in (
+            "github-issue-forms.json",
+            "github-vulnerability-report-form.json",
+            "github-issue-config.json",
+        ):
+            shutil.copy(
+                os.path.join(SCHEMA_SOURCE_DIR, schema_name),
+                os.path.join(temp_root, "schemas", schema_name),
+            )
+        with open(os.path.join(temp_root, "README.md"), "w", encoding="utf-8") as handle:
+            handle.write("# Temporary repository\n")
+        with open(os.path.join(temp_root, "orphan.md"), "w", encoding="utf-8") as handle:
+            handle.write("# Orphan document\n")
+        with open(
+            os.path.join(temp_root, ".github", "workflows", "example.yml"), "w", encoding="utf-8"
+        ) as handle:
+            handle.write(WORKFLOW_WITH_ON_KEY)
+
+        errors, warnings = run_checks(temp_root)
+
+        if not any("orphan.md" in message for message in warnings):
+            failures.append(
+                "orphan Markdown file: expected a warning, got warnings "
+                f"{warnings} and errors {errors}"
+            )
+        if any("orphan.md" in message for message in errors):
+            failures.append(
+                "orphan Markdown file: expected a warning only, but it was also reported as an error"
+            )
+        workflow_errors = [
+            message for message in errors if "example.yml" in message
+        ]
+        if workflow_errors:
+            failures.append(
+                "workflow with an 'on:' key: expected no errors, got " f"{workflow_errors}"
+            )
 
     total = negative + positive
     print(

@@ -26,6 +26,7 @@ Nothing here is application code. It is documentation and configuration, maintai
 | [`.github/ISSUE_TEMPLATE/question.yml`](.github/ISSUE_TEMPLATE/question.yml) | Default issue form: question. |
 | [`.github/ISSUE_TEMPLATE/config.yml`](.github/ISSUE_TEMPLATE/config.yml) | Default issue template chooser configuration. |
 | [`.github/VULNERABILITY_REPORT.yml`](.github/VULNERABILITY_REPORT.yml) | Default private vulnerability report form. |
+| [`schemas/README.md`](schemas/README.md) | Where the JSON Schemas come from, how they are licensed, and how to refresh them. |
 
 ---
 
@@ -47,27 +48,43 @@ Nothing here is application code. It is documentation and configuration, maintai
 ├── CODE_OF_CONDUCT.md                 # Default code of conduct
 ├── CONTRIBUTING.md                    # Default contribution guidelines
 ├── PULL_REQUEST_TEMPLATE.md           # Default pull request template
-├── REPOSITORY_ONBOARDING.md           # Repository setup and maintenance checklist
 ├── SECURITY.md                        # Default security policy
 ├── SUPPORT.md                         # Default support guidance
 ├── README.md                          # This file
+├── REPOSITORY_ONBOARDING.md           # Repository setup and maintenance checklist
 ├── schemas/
 │   ├── github-issue-forms.json        # Vendored JSON Schema for issue forms
 │   ├── github-issue-config.json       # Vendored JSON Schema for the chooser
 │   ├── github-vulnerability-report-form.json
 │   │                                   # Derived schema for vulnerability forms
 │   ├── PROVENANCE.json                # Where each schema came from, and when
-│   └── README.md                      # Schema sources and maintenance procedure
+│   └── README.md                      # Schema sources, licensing, and maintenance
 ├── scripts/
 │   ├── validate_docs.py               # File, form, and link validation
 │   ├── test_validate_docs.py          # Validator tests: negative cases and positive controls
 │   └── update_schemas.py              # Refreshes the vendored schemas
+├── .gitattributes                     # Normalises line endings to LF
+├── .gitignore                         # Ignores Python bytecode and node_modules
 ├── .markdownlint.json                 # markdownlint configuration
+├── .markdownlintignore                # Paths excluded from markdownlint
 ├── .yamllint.yml                      # yamllint configuration
-└── requirements-docs.txt              # Pinned validation tooling
+├── package.json                       # Node tooling declaration
+├── package-lock.json                  # Pinned Node dependency tree
+└── requirements-docs.txt              # Pinned Python tooling
 ```
 
-The files from `CODE_OF_CONDUCT.md` down to `README.md`, and everything under `profile/` and `.github/ISSUE_TEMPLATE/` and `.github/VULNERABILITY_REPORT.yml`, are organization defaults. The workflow, the `schemas/` directory, the `scripts/` directory, and the tool configuration files are tooling for this repository alone.
+### Which files are inherited
+
+Not every file in this repository applies to other organization repositories. There are four distinct groups:
+
+| Group | Files | Applies to |
+| --- | --- | --- |
+| **Organization defaults** | `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`, `SECURITY.md`, `SUPPORT.md`, `PULL_REQUEST_TEMPLATE.md`, `.github/ISSUE_TEMPLATE/`, `.github/VULNERABILITY_REPORT.yml` | Every organization repository that does not define its own file of the same type |
+| **Organization profile** | `profile/README.md` | The organization page on GitHub only |
+| **This repository only** | `README.md`, `REPOSITORY_ONBOARDING.md`, `.github/workflows/`, `schemas/`, `scripts/`, and the tool configuration files | The `NaaBTech/.github` repository only |
+| **Settings, not files** | Labels, private vulnerability reporting, branch protection, rulesets, code scanning, and Dependabot | Configured in GitHub, per repository or per organization |
+
+`README.md` at the root of this repository is the readme for **this** repository. It is not a community health file and is not inherited by other repositories. `REPOSITORY_ONBOARDING.md` is a maintainer guide for this repository; GitHub has no mechanism for inheriting it.
 
 **Workflows are not organization defaults.** GitHub inherits community health files between repositories; it does not inherit workflow files. The `validate-docs.yml` workflow runs only in `NaaBTech/.github`. Every project that needs CI has its own workflow in its own `.github/workflows/` directory — see [REPOSITORY_ONBOARDING.md](REPOSITORY_ONBOARDING.md).
 
@@ -140,6 +157,20 @@ Anything not on this list must be confirmed with the organization owners before 
 
 ---
 
+## License
+
+**This repository has no license file, and that is an open decision for the organization owners.**
+
+GitHub does not use an organization's `.github` repository as the source of a default license for other projects, so each software project needs its own license. That is a separate matter from licensing the contents of *this* repository — its documentation, the Python scripts, and the vendored schemas.
+
+- Until a license is chosen, the contents of this repository are **not** licensed for reuse. The public visibility of the repository does not grant permission to copy or redistribute it.
+- The two vendored upstream schemas are redistributed under the **Apache-2.0** license of the [SchemaStore](https://github.com/SchemaStore/schemastore) repository. See [`schemas/README.md`](schemas/README.md) and `schemas/PROVENANCE.json` for the attribution and hashes.
+- `github-vulnerability-report-form.json` is derived in this repository from one of those upstream schemas and is covered by the same terms.
+
+Selecting a license for this repository requires the owners' approval and, where appropriate, legal review.
+
+---
+
 ## Maintaining These Files
 
 - **Single source of truth.** These defaults are edited here and nowhere else. Individual repositories are not expected to copy them.
@@ -148,7 +179,18 @@ Anything not on this list must be confirmed with the organization owners before 
 - **No unapproved legal commitments.** Safe-harbour provisions, immunity, indemnification, response-time guarantees, and bug bounty terms are business and legal decisions. They require the organization owners' approval and, where appropriate, legal review before they are written into these files.
 - **Repository-specific rules win.** A default must stay general enough to apply across different technologies. Anything that only makes sense for one repository belongs in that repository.
 - **Change discipline.** Changes to these files follow the conventions in [`CONTRIBUTING.md`](CONTRIBUTING.md), including the branch naming and commit message conventions described there.
-- **Validate before merging.** The `Validate documentation` workflow checks YAML syntax, the GitHub form schemas, required file naming, and internal links on every pull request. The validation itself reads only files in this repository, so a third-party website outage cannot fail a documentation change. Installing the tooling still needs access to the Python and npm package registries, so a registry outage can prevent the workflow from completing setup. Run the same checks locally with `python scripts/validate_docs.py .`, `python scripts/test_validate_docs.py`, `yamllint --strict --config-file .yamllint.yml .`, and `markdownlint --config .markdownlint.json "**/*.md"`.
+- **Validate before merging.** The `Validate documentation` workflow checks YAML syntax, the GitHub form schemas, required file naming, and internal links on every pull request. The validation itself reads only files in this repository, so a third-party website outage cannot fail a documentation change. Installing the tooling still needs access to the Python and npm package registries, so a registry outage can prevent the workflow from completing setup. Run the same checks locally:
+
+  ```bash
+  python -m pip install --requirement requirements-docs.txt
+  npm ci
+  python scripts/validate_docs.py .
+  python scripts/test_validate_docs.py
+  yamllint --strict --config-file .yamllint.yml .
+  npx --no-install markdownlint --config .markdownlint.json "**/*.md"
+  ```
+
+  The Python dependencies are pinned in `requirements-docs.txt` and the Node dependency tree is pinned in `package-lock.json`, so a local run and the CI run use the same versions.
 
 ---
 

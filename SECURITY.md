@@ -17,7 +17,7 @@ It does **not** apply to:
 
 - Third-party products and services. Report those to their own maintainers.
 - Systems that NaaB Tech does not own or operate. See [Authorization and Permissions](#authorization-and-permissions).
-- Systems covered by a signed agreement with a customer. Contact the organization through the [official website](https://naabtech.ir).
+- Systems covered by a signed agreement with a customer. Contact the organization through the [official website](https://naabtech.ir) or [info@naabtech.ir](mailto:info@naabtech.ir).
 
 ---
 
@@ -42,11 +42,9 @@ The report opens a private advisory that only you and the maintainers can see. Y
 
 - GitHub's private vulnerability reporting interface is available for **public repositories** in which it has been enabled. It is not available for private or internal repositories through the web interface.
 - The feature is enabled **per repository** by an owner, maintainer, or administrator. It is not enabled organization-wide by default.
-- A custom form does not enable the feature. Adding [`VULNERABILITY_REPORT.yml`](.github/VULNERABILITY_REPORT.yml) only customises the questions asked once the feature is already enabled for that repository.
+- The private report form for this organization is [`.github/VULNERABILITY_REPORT.yml`](.github/VULNERABILITY_REPORT.yml). It is used where private reporting has been enabled, and a repository may replace it with its own form. **The form does not enable the feature** — it only customises the questions asked once the feature is already enabled for that repository.
 
 If the **Report a vulnerability** option is not present on a repository, use one of the alternatives below. This policy does not promise that the option is available in any given repository.
-
-A private report form is provided at [.github/VULNERABILITY_REPORT.yml](.github/VULNERABILITY_REPORT.yml) and is used where private reporting has been enabled. A repository may replace it with its own form.
 
 #### Enabling it across the organization
 
@@ -71,7 +69,7 @@ If private reporting is not available for the repository in question:
 - Email **[info@naabtech.ir](mailto:info@naabtech.ir)** with the subject line `Security report — <repository>`. State clearly in the subject line that the message is a security report, so it is routed to the maintainers rather than treated as a general inquiry.
 - For issues affecting several repositories, contact the organization owners through [github.com/NaaBTech](https://github.com/NaaBTech).
 
-> **Open item.** `info@naabtech.ir` is NaaB Tech's published general contact address, not a dedicated security mailbox. A dedicated security address would route reports more reliably and should be designated once that mailbox exists and is staffed. Until then, mark the message clearly and avoid putting sensitive detail in the subject line.
+> **Open item.** `info@naabtech.ir` is NaaB Tech's published general contact address. It is not a dedicated security mailbox, and it is not a continuously monitored security intake channel. A dedicated security address would route reports more reliably and should be designated once that mailbox exists and is staffed. Until then, mark the message clearly so that it reaches the maintainers rather than being treated as a general inquiry, and avoid putting sensitive detail in the subject line.
 
 ### What to include
 

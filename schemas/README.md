@@ -18,7 +18,15 @@ These JSON Schemas are used by `scripts/validate_docs.py` to check the organizat
 | `github-issue-forms.json` | <https://www.schemastore.org/github-issue-forms.json> | <https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-issue-forms> and <https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/syntax-for-githubs-form-schema> |
 | `github-issue-config.json` | <https://www.schemastore.org/github-issue-config.json> | <https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/configuring-issue-templates-for-your-repository> |
 
+### Licence and attribution
+
+The two upstream schemas live in the [SchemaStore](https://github.com/SchemaStore/schemastore) repository at `src/schemas/json/`. Neither file carries an individual licence header. They are distributed as part of that repository, which is licensed under **Apache-2.0**, and they are vendored here under those terms. The only modification is the patch described below.
+
+`PROVENANCE.json` records the upstream URL, the path inside the SchemaStore repository, the SHA-256 of the upstream download, the SHA-256 of the vendored file, the upstream licence, and whether the file was patched or derived.
+
 GitHub does not publish a separate JSON Schema for private vulnerability reporting forms. The documentation states that these forms use the same YAML syntax as issue forms, and that they support the `checkboxes`, `dropdown`, `input`, `markdown`, and `textarea` elements — notably **not** `upload`. The vulnerability schema is therefore derived from the issue forms schema by restricting the permitted element types and the permitted top-level keys.
+
+**`github-vulnerability-report-form.json` is a schema derived in this repository. It is not a schema published by GitHub, and it is not a SchemaStore schema.** Its `$id` points at its own path in this repository, not at a published URL. The restriction it encodes reflects GitHub's documented behaviour at the time of derivation; it is not a guarantee of what GitHub accepts at any later point.
 
 Reference: <https://docs.github.com/en/code-security/how-tos/report-and-fix-vulnerabilities/configure-vulnerability-reporting/configure-for-a-repository>
 
@@ -46,7 +54,7 @@ The script:
 
 1. Downloads both upstream schemas from SchemaStore.
 2. Re-applies the `min_length` patch to the issue forms schema.
-3. Writes both schemas into this directory.
+3. Writes both schemas into this directory. Each file is written to a temporary name and then moved into place, so a failure part way through cannot leave a half-written schema behind.
 4. Regenerates `github-vulnerability-report-form.json` from the patched issue forms schema.
 5. Rewrites `PROVENANCE.json` with the retrieval time and the SHA-256 of each upstream download and vendored file.
 
@@ -55,6 +63,22 @@ After refreshing:
 ```bash
 python scripts/test_validate_docs.py
 python scripts/validate_docs.py .
+```
+
+### Verifying the vendored files
+
+The `vendored_sha256` values in `PROVENANCE.json` describe the bytes as they are committed, which are LF-terminated. `.gitattributes` normalises line endings to LF in every checkout, so the hashes can be reproduced from a fresh clone on any platform:
+
+```bash
+python - <<'PY'
+import hashlib, json, os
+d = "schemas"
+p = json.load(open(os.path.join(d, "PROVENANCE.json"), encoding="utf-8"))
+for name, meta in p["schemas"].items():
+    with open(os.path.join(d, name), "rb") as handle:
+        digest = hashlib.sha256(handle.read()).hexdigest()
+    print(name, "MATCH" if digest == meta["vendored_sha256"] else "MISMATCH")
+PY
 ```
 
 ### When to refresh

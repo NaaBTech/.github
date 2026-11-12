@@ -1,0 +1,18 @@
+# Normalize text files in the repository to LF, in the git object database and
+# in every checkout.
+#
+# Without this, a contributor on Windows with core.autocrlf=true receives CRLF
+# working-tree files. That breaks the documented local validation command
+# (yamllint rejects CRLF) and makes the schema integrity hashes in
+# schemas/PROVENANCE.json unreproducible from a fresh checkout, because those
+# hashes describe the LF bytes that are committed.
+* text=auto eol=lf
+
+# Binary files must never be line-ending translated.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+*.zip binary

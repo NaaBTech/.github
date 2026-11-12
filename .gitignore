@@ -1,3 +1,6 @@
 # Python bytecode from the validation scripts.
 __pycache__/
 *.py[cod]
+
+# Node.js dependencies installed by npm.
+node_modules/

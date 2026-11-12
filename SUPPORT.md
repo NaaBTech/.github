@@ -63,7 +63,7 @@ Security vulnerabilities are **never** reported through a public issue, pull req
 
 Use GitHub's private vulnerability reporting — the **Security** tab → **Report a vulnerability** — where it is enabled for the repository. The feature is available for **public repositories**, and only where it has been enabled for that repository, so the option may not be present everywhere.
 
-If it is not available, email **[info@naabtech.ir](mailto:info@naabtech.ir)** with the subject line `Security report — <repository>`, and follow the other routes in [SECURITY.md](SECURITY.md).
+If it is not available, email **[info@naabtech.ir](mailto:info@naabtech.ir)** with the subject line `Security report — <repository>`, and follow the other routes in [SECURITY.md](SECURITY.md). That address is NaaB Tech's general contact, not a monitored security inbox, so mark the message clearly.
 
 Do not include customer data, credentials, tokens, or other confidential material in a public issue, a discussion, or a support channel. Before publishing anything publicly, allow time for the report to be reviewed and a fix to be prepared.
 

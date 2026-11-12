@@ -6,10 +6,17 @@ external URL is fetched, so validation does not depend on the availability of
 any third-party service. (The CI job that runs this script still needs access
 to the Python and npm package registries to install its tooling.)
 
+Three severities are reported:
+
+- **error** - a problem that must be fixed. Any error makes the run fail.
+- **warning** - something worth a maintainer's attention that does not
+  necessarily block a change. Warnings are reported but do not fail the run.
+- **info** - contextual output, such as the summary of what was checked.
+
 Usage:
     python scripts/validate_docs.py [repository_root]
 
-Exit code is 0 when every check passes, 1 otherwise.
+Exit code is 0 when no errors were found, 1 otherwise.
 """
 
 import json
@@ -36,17 +43,37 @@ SCHEMA_DIR = os.path.join(ROOT, "schemas")
 # Schemas
 # --------------------------------------------------------------------------
 
-def load_schema(name):
-    path = os.path.join(SCHEMA_DIR, name)
+
+def load_schema(schema_dir, name):
+    path = os.path.join(schema_dir, name)
     if not os.path.exists(path):
-        raise SystemExit(f"missing schema {name}. Run scripts/update_schemas.py to vendor it.")
+        raise SystemExit(
+            f"missing schema {name} in {schema_dir}. "
+            "Run scripts/update_schemas.py to vendor it."
+        )
     with open(path, encoding="utf-8") as handle:
         return json.load(handle)
 
 
-ISSUE_FORM_SCHEMA = load_schema("github-issue-forms.json")
-VULNERABILITY_FORM_SCHEMA = load_schema("github-vulnerability-report-form.json")
-ISSUE_CONFIG_SCHEMA = load_schema("github-issue-config.json")
+def load_schemas(root):
+    """Load the vendored schemas that belong to a repository root.
+
+    The schemas are read from the repository being validated, not from the
+    directory this script happens to live in, so that validating a different
+    checkout uses that checkout's schemas.
+    """
+    schema_dir = os.path.join(root, "schemas")
+    return {
+        "issue_form": load_schema(schema_dir, "github-issue-forms.json"),
+        "vulnerability_form": load_schema(schema_dir, "github-vulnerability-report-form.json"),
+        "issue_config": load_schema(schema_dir, "github-issue-config.json"),
+    }
+
+
+# The default repository's schemas, for direct use by the test suite.
+ISSUE_FORM_SCHEMA = load_schema(SCHEMA_DIR, "github-issue-forms.json")
+VULNERABILITY_FORM_SCHEMA = load_schema(SCHEMA_DIR, "github-vulnerability-report-form.json")
+ISSUE_CONFIG_SCHEMA = load_schema(SCHEMA_DIR, "github-issue-config.json")
 
 # --------------------------------------------------------------------------
 # Expectations
@@ -69,30 +96,97 @@ REQUIRED_FILES = {
     ".github/VULNERABILITY_REPORT.yml": "vulnerability report form",
 }
 
+# Tooling this repository needs for its own validation to be reproducible.
+# These are not organization defaults; they are required for the checks in
+# this script and in the CI workflow to run at all.
+REQUIRED_TOOLING_FILES = {
+    ".gitattributes": "line-ending normalization",
+    ".gitignore": "ignored build artifacts",
+    ".markdownlint.json": "markdownlint configuration",
+    ".markdownlintignore": "markdownlint exclusions",
+    ".yamllint.yml": "yamllint configuration",
+    "package.json": "Node tooling declaration",
+    "package-lock.json": "pinned Node dependency tree",
+    "requirements-docs.txt": "pinned Python tooling",
+    "schemas/github-issue-forms.json": "vendored issue form schema",
+    "schemas/github-issue-config.json": "vendored chooser schema",
+    "schemas/github-vulnerability-report-form.json": "derived vulnerability form schema",
+    "schemas/PROVENANCE.json": "schema provenance record",
+    "scripts/validate_docs.py": "documentation validator",
+    "scripts/test_validate_docs.py": "validator tests",
+    "scripts/update_schemas.py": "schema refresh tool",
+}
+
+# The GitHub form files. Only these are checked for keys that YAML parses as
+# booleans: a workflow's `on:` key is parsed the same way but is legitimate.
+FORM_FILES = (
+    ".github/ISSUE_TEMPLATE/bug_report.yml",
+    ".github/ISSUE_TEMPLATE/feature_request.yml",
+    ".github/ISSUE_TEMPLATE/question.yml",
+    ".github/ISSUE_TEMPLATE/config.yml",
+    ".github/VULNERABILITY_REPORT.yml",
+)
+
 # Labels the default issue forms apply. They must also exist in every
 # repository that uses the forms -- see REPOSITORY_ONBOARDING.md.
 EXPECTED_LABELS = {"bug", "enhancement", "question"}
 
-# Keys YAML parses as booleans, which GitHub rejects as form keys.
-FORBIDDEN_KEYS = {
+# Key names that YAML 1.1 readers parse as booleans. GitHub rejects these as
+# form keys, either as a boolean or as the corresponding string.
+BOOLEAN_KEY_NAMES = {
     "y", "Y", "yes", "Yes", "YES", "n", "N", "no", "No", "NO",
     "true", "True", "TRUE", "false", "False", "FALSE",
     "on", "On", "ON", "off", "Off", "OFF",
 }
 
+# Option values that YAML 1.1 readers parse as booleans.
+BOOLEAN_LIKE = {"y", "n", "yes", "no", "true", "false", "on", "off"}
+
 ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]+$")
 LINK_PATTERN = re.compile(r"(?<!!)\[([^\]]*)\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)")
-BOOLEAN_LIKE = {"y", "n", "yes", "no", "true", "false", "on", "off"}
 
 # --------------------------------------------------------------------------
 # Helpers
 # --------------------------------------------------------------------------
 
 
+class UniqueKeyLoader(yaml.SafeLoader):
+    """A SafeLoader that rejects duplicate mapping keys.
+
+    PyYAML silently keeps the last value for a duplicated key, which hides a
+    real authoring mistake. This is still a safe loader: no YAML tags are
+    constructed beyond the standard safe set.
+    """
+
+
+def _construct_unique_mapping(loader, node, deep=False):
+    mapping = {}
+    for key_node, value_node in node.value:
+        key = loader.construct_object(key_node, deep=deep)
+        try:
+            duplicate = key in mapping
+        except TypeError:  # unhashable key, cannot be a duplicate
+            duplicate = False
+        if duplicate:
+            raise yaml.constructor.ConstructorError(
+                "while constructing a mapping",
+                node.start_mark,
+                f"found duplicate key {key!r}",
+                key_node.start_mark,
+            )
+        mapping[key] = loader.construct_object(value_node, deep=deep)
+    return mapping
+
+
+UniqueKeyLoader.add_constructor(
+    yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, _construct_unique_mapping
+)
+
+
 def parse_yaml_text(text):
     """Parse YAML text. Returns (data, error_message). error_message is None on success."""
     try:
-        return yaml.safe_load(text), None
+        return yaml.load(text, Loader=UniqueKeyLoader), None
     except yaml.YAMLError as exc:
         return None, "YAML parse error: " + str(exc).replace("\n", " ")
 
@@ -104,6 +198,32 @@ def schema_errors(name, data, schema):
     for error in sorted(validator.iter_errors(data), key=lambda e: list(e.path)):
         location = "/".join(str(part) for part in error.absolute_path) or "<document>"
         errors.append(f"{name}: schema: {location}: {error.message}")
+    return errors
+
+
+def boolean_key_errors(name, data):
+    """Report keys that YAML parses as booleans.
+
+    GitHub's form parser rejects them. PyYAML turns an unquoted `yes:` or
+    `on:` into a Python boolean, so the check has to look at the key's type
+    as well as its name.
+    """
+    errors = []
+
+    def walk(node, trail):
+        if isinstance(node, dict):
+            for key in node.keys():
+                if isinstance(key, bool) or (isinstance(key, str) and key in BOOLEAN_KEY_NAMES):
+                    shown = repr(key)
+                    errors.append(
+                        f"{trail}.{shown}: key is parsed as a boolean by YAML and is rejected by GitHub"
+                    )
+                walk(node[key], f"{trail}.{key!r}")
+        elif isinstance(node, list):
+            for index, value in enumerate(node):
+                walk(value, f"{trail}[{index}]")
+
+    walk(data, name)
     return errors
 
 
@@ -196,6 +316,7 @@ def form_rule_errors(name, data, expected_labels=None):
 def validate_form_document(name, data, schema, expected_labels=None):
     """Validate one issue form or vulnerability report form. Returns error strings."""
     errors = schema_errors(name, data, schema)
+    errors.extend(boolean_key_errors(name, data))
     errors.extend(form_rule_errors(name, data, expected_labels))
     return errors
 
@@ -203,6 +324,7 @@ def validate_form_document(name, data, schema, expected_labels=None):
 def validate_config_document(name, data):
     """Validate the issue template chooser configuration. Returns error strings."""
     errors = schema_errors(name, data, ISSUE_CONFIG_SCHEMA)
+    errors.extend(boolean_key_errors(name, data))
     if isinstance(data, dict):
         links = data.get("contact_links")
         if isinstance(links, list):
@@ -219,17 +341,6 @@ def validate_config_document(name, data):
                 if isinstance(about, str) and len(about) > 1024:
                     errors.append(f"{name}: contact_links[{index}]: 'about' must be 1024 characters or fewer")
     return errors
-
-
-def walk_forbidden_keys(node, trail, found):
-    if isinstance(node, dict):
-        for key, value in node.items():
-            if key in FORBIDDEN_KEYS:
-                found.append(f"{trail}.{key}")
-            walk_forbidden_keys(value, f"{trail}.{key}", found)
-    elif isinstance(node, list):
-        for index, value in enumerate(node):
-            walk_forbidden_keys(value, f"{trail}[{index}]", found)
 
 
 # --------------------------------------------------------------------------
@@ -260,13 +371,30 @@ def repo_files(root, suffixes):
     return sorted(found)
 
 
+def resolve_within(root, relative):
+    """Resolve a repository-relative path and confirm it stays inside root.
+
+    Returns the absolute path, or None when the target escapes the repository.
+    """
+    resolved = os.path.normpath(os.path.join(root, relative.replace("/", os.sep)))
+    if resolved != root and not resolved.startswith(root + os.sep):
+        return None
+    return resolved
+
+
 def run_checks(root):
-    """Run every check. Returns a list of error strings."""
+    """Run every check. Returns (errors, warnings)."""
     errors = []
+    warnings = []
+    schemas = load_schemas(root)
 
     for name, purpose in REQUIRED_FILES.items():
         if not os.path.exists(os.path.join(root, name.replace("/", os.sep))):
             errors.append(f"missing required file: {name} ({purpose})")
+
+    for name, purpose in REQUIRED_TOOLING_FILES.items():
+        if not os.path.exists(os.path.join(root, name.replace("/", os.sep))):
+            errors.append(f"missing required tooling file: {name} ({purpose})")
 
     parsed = {}
     for path in repo_files(root, (".yml", ".yaml")):
@@ -278,10 +406,8 @@ def run_checks(root):
             errors.append(f"{name}: {error}")
             continue
         parsed[name] = data
-        found = []
-        walk_forbidden_keys(data, name, found)
-        for item in found:
-            errors.append(f"{item}: key is parsed as a boolean by YAML and is rejected by GitHub")
+
+    validated_forms = set()
 
     issue_template_dir = os.path.join(root, ".github", "ISSUE_TEMPLATE")
     if os.path.isdir(issue_template_dir):
@@ -294,20 +420,49 @@ def run_checks(root):
             if name not in parsed:
                 errors.append(f"{name}: could not be parsed, so it was not validated")
                 continue
-            errors.extend(validate_form_document(name, parsed[name], ISSUE_FORM_SCHEMA, EXPECTED_LABELS))
+            validated_forms.add(name)
+            if name not in FORM_FILES:
+                warnings.append(
+                    f"{name}: is not listed in FORM_FILES in scripts/validate_docs.py, "
+                    "so it is validated as an issue form by default"
+                )
+            errors.extend(
+                validate_form_document(name, parsed[name], schemas["issue_form"], EXPECTED_LABELS)
+            )
 
     vuln_name = ".github/VULNERABILITY_REPORT.yml"
     if vuln_name in parsed:
-        errors.extend(validate_form_document(vuln_name, parsed[vuln_name], VULNERABILITY_FORM_SCHEMA))
+        validated_forms.add(vuln_name)
+        errors.extend(
+            validate_form_document(vuln_name, parsed[vuln_name], schemas["vulnerability_form"])
+        )
 
     config_name = ".github/ISSUE_TEMPLATE/config.yml"
     if config_name in parsed:
+        validated_forms.add(config_name)
         errors.extend(validate_config_document(config_name, parsed[config_name]))
+
+    for name in FORM_FILES:
+        if name not in validated_forms:
+            errors.append(f"{name}: declared as a form file but was not validated")
+
+    # Labels that are declared for the organization forms but are not used by
+    # any of them are dead weight and usually mean the set has drifted.
+    used_labels = set()
+    for name in FORM_FILES:
+        data = parsed.get(name)
+        if isinstance(data, dict) and isinstance(data.get("labels"), list):
+            used_labels.update(label for label in data["labels"] if isinstance(label, str))
+    for label in sorted(EXPECTED_LABELS - used_labels):
+        warnings.append(
+            f"label '{label}' is declared for the organization forms but no form applies it"
+        )
 
     markdown_files = {
         os.path.relpath(path, root).replace(os.sep, "/"): path
         for path in repo_files(root, (".md",))
     }
+    linked = set()
     for name, path in markdown_files.items():
         with open(path, encoding="utf-8") as handle:
             text = handle.read()
@@ -321,7 +476,15 @@ def run_checks(root):
                     os.path.join(os.path.dirname(name), url.split("#")[0])
                 ).replace(os.sep, "/")
                 anchor = url.split("#")[1] if "#" in url else None
-            if not os.path.exists(os.path.join(root, target.replace("/", os.sep))):
+            if anchor is None and target != name:
+                linked.add(target)
+            resolved = resolve_within(root, target)
+            if resolved is None:
+                errors.append(
+                    f"{name}: link '{url}' resolves outside the repository and was rejected"
+                )
+                continue
+            if not os.path.exists(resolved):
                 errors.append(f"{name}: link '{url}' points to '{target}', which does not exist")
                 continue
             if anchor:
@@ -330,19 +493,29 @@ def run_checks(root):
                 elif anchor not in headings(markdown_files[target]):
                     errors.append(f"{name}: link '{url}' points to an anchor that does not exist in '{target}'")
 
-    return errors
+    # Markdown that nothing links to is hard to find. The organization profile
+    # README is linked from the repository root, so only documents below the
+    # root are reported.
+    for name in sorted(markdown_files):
+        if name == "README.md" or name in linked:
+            continue
+        warnings.append(f"{name}: no Markdown file links to it, so it is hard to discover")
+
+    return errors, warnings
 
 
 def main():
     root = os.path.abspath(sys.argv[1] if len(sys.argv) > 1 else ROOT)
-    errors = run_checks(root)
+    errors, warnings = run_checks(root)
     print(f"validate_docs: {root}")
+    for message in warnings:
+        print(f"  warning: {message}")
     if errors:
         for message in errors:
             print(f"  error: {message}")
-        print(f"\n{len(errors)} error(s)")
+        print(f"\n{len(errors)} error(s), {len(warnings)} warning(s)")
         return 1
-    print("  all checks passed")
+    print(f"  no errors ({len(warnings)} warning(s))")
     return 0
 
 

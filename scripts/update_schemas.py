@@ -27,6 +27,16 @@ UPSTREAM = {
     "github-issue-config.json": "https://www.schemastore.org/github-issue-config.json",
 }
 
+# Where each schema lives inside the SchemaStore repository, for attribution.
+UPSTREAM_REPO_PATH = {
+    "github-issue-forms.json": "src/schemas/json/github-issue-forms.json",
+    "github-issue-config.json": "src/schemas/json/github-issue-config.json",
+}
+
+# The SchemaStore repository distributes these schema files under its own
+# Apache-2.0 license. The individual files carry no separate licence header.
+UPSTREAM_LICENSE = "Apache-2.0"
+
 # Element types GitHub supports in a private vulnerability reporting form.
 # https://docs.github.com/en/code-security/how-tos/report-and-fix-vulnerabilities/configure-vulnerability-reporting/configure-for-a-repository
 VULNERABILITY_TYPES = ["checkboxes", "dropdown", "input", "markdown", "textarea"]
@@ -47,10 +57,20 @@ def download(url):
 
 
 def write_json(name, data):
+    """Write a schema atomically.
+
+    The file is written to a temporary name in the same directory and then
+    replaced, so a failure part way through cannot leave a half-written
+    schema behind.
+    """
     path = os.path.join(SCHEMA_DIR, name)
-    with open(path, "w", encoding="utf-8", newline="\n") as handle:
+    temp_path = path + ".tmp"
+    with open(temp_path, "w", encoding="utf-8", newline="\n") as handle:
         json.dump(data, handle, indent=2, ensure_ascii=False, sort_keys=False)
         handle.write("\n")
+        handle.flush()
+        os.fsync(handle.fileno())
+    os.replace(temp_path, path)
     print(f"wrote schemas/{name}")
 
 
@@ -97,12 +117,15 @@ def apply_min_length_patch(schema):
 def derive_vulnerability_schema(issue_forms_schema):
     """Restrict the issue forms schema to the vulnerability reporting form rules."""
     schema = json.loads(json.dumps(issue_forms_schema))
-    schema["$id"] = "https://naabtech.ir/schemas/github-vulnerability-report-form.json"
-    schema["title"] = "GitHub private vulnerability reporting form schema"
+    # The identifier points at the file in this repository. It is not a URL that
+    # is published anywhere, so it must not look like one.
+    schema["$id"] = "https://github.com/NaaBTech/.github/schemas/github-vulnerability-report-form.json"
+    schema["title"] = "NaaB Tech private vulnerability reporting form schema (derived, not an official GitHub schema)"
     schema["$comment"] = (
         "Derived from github-issue-forms.json by restricting the element types and "
         "top-level keys that GitHub supports for private vulnerability reporting "
-        "forms. Regenerate with scripts/update_schemas.py. See schemas/README.md."
+        "forms. This is not a schema published by GitHub. Regenerate with "
+        "scripts/update_schemas.py. See schemas/README.md."
     )
 
     definitions = schema["definitions"]
@@ -129,6 +152,13 @@ def main():
     provenance = {
         "retrieved_utc": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "source": "https://www.schemastore.org/",
+        "upstream_repository": "https://github.com/SchemaStore/schemastore",
+        "upstream_license": UPSTREAM_LICENSE,
+        "upstream_license_note": (
+            "The vendored schema files carry no individual licence header. They are "
+            "distributed as part of the SchemaStore repository, which is licensed "
+            "under Apache-2.0."
+        ),
         "schemas": {},
     }
     for name, url in UPSTREAM.items():
@@ -141,9 +171,12 @@ def main():
         write_json(name, data)
         provenance["schemas"][name] = {
             "upstream_url": url,
+            "upstream_repository_path": UPSTREAM_REPO_PATH[name],
             "upstream_sha256": sha256_bytes(raw),
             "vendored_sha256": sha256_file(os.path.join(SCHEMA_DIR, name)),
+            "upstream_license": UPSTREAM_LICENSE,
             "patched": name == "github-issue-forms.json",
+            "derived": False,
         }
 
     if issue_forms is None:
@@ -154,6 +187,12 @@ def main():
         "derived_from": "github-issue-forms.json",
         "upstream_url": "https://docs.github.com/en/code-security/how-tos/report-and-fix-vulnerabilities/configure-vulnerability-reporting/configure-for-a-repository",
         "vendored_sha256": sha256_file(os.path.join(SCHEMA_DIR, derived_name)),
+        "upstream_license": UPSTREAM_LICENSE,
+        "license_note": (
+            "Derived in this repository from github-issue-forms.json. The restriction "
+            "to the element types and top-level keys documented by GitHub is NaaB "
+            "Tech's own work. This is not a schema published by GitHub."
+        ),
         "patched": False,
         "derived": True,
     }
