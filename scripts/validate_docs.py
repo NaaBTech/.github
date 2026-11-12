@@ -23,6 +23,7 @@ import json
 import os
 import re
 import sys
+import urllib.parse
 
 try:
     import yaml
@@ -32,6 +33,7 @@ except ImportError:  # pragma: no cover
 
 try:
     from jsonschema import Draft7Validator
+    from jsonschema.validators import validator_for
 except ImportError:  # pragma: no cover
     sys.stderr.write("jsonschema is required: pip install -r requirements-docs.txt\n")
     raise SystemExit(2)
@@ -44,7 +46,23 @@ SCHEMA_DIR = os.path.join(ROOT, "schemas")
 # --------------------------------------------------------------------------
 
 
+def schema_validator(schema):
+    """Return the validator class for a schema's declared JSON Schema dialect.
+
+    Falls back to Draft 7 when the schema does not declare a dialect.
+    """
+    try:
+        return validator_for(schema)
+    except Exception:  # noqa: BLE001 - an unknown dialect must not stop the run
+        return Draft7Validator
+
+
 def load_schema(schema_dir, name):
+    """Load a vendored schema and verify that it is a valid JSON Schema.
+
+    Parsing a JSON document successfully does not mean the document is a valid
+    schema, so the schema is checked against its own declared meta-schema.
+    """
     path = os.path.join(schema_dir, name)
     if not os.path.exists(path):
         raise SystemExit(
@@ -52,7 +70,12 @@ def load_schema(schema_dir, name):
             "Run scripts/update_schemas.py to vendor it."
         )
     with open(path, encoding="utf-8") as handle:
-        return json.load(handle)
+        schema = json.load(handle)
+    try:
+        schema_validator(schema).check_schema(schema)
+    except Exception as exc:  # noqa: BLE001
+        raise SystemExit(f"{name} is not a valid JSON Schema: {exc}")
+    return schema
 
 
 def load_schemas(root):
@@ -112,6 +135,8 @@ REQUIRED_TOOLING_FILES = {
     "schemas/github-issue-config.json": "vendored chooser schema",
     "schemas/github-vulnerability-report-form.json": "derived vulnerability form schema",
     "schemas/PROVENANCE.json": "schema provenance record",
+    "schemas/third-party/LICENSE-Apache-2.0.txt": "Apache-2.0 license text for the vendored schemas",
+    "schemas/third-party/NOTICE-SchemaStore.txt": "upstream NOTICE attribution for the vendored schemas",
     "scripts/validate_docs.py": "documentation validator",
     "scripts/test_validate_docs.py": "validator tests",
     "scripts/update_schemas.py": "schema refresh tool",
@@ -143,7 +168,17 @@ BOOLEAN_KEY_NAMES = {
 BOOLEAN_LIKE = {"y", "n", "yes", "no", "true", "false", "on", "off"}
 
 ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]+$")
-LINK_PATTERN = re.compile(r"(?<!!)\[([^\]]*)\]\(([^)\s]+)(?:\s+\"[^\"]*\")?\)")
+
+# Inline Markdown links: [text](target) where the target may be wrapped in
+# angle brackets, and may be followed by a title.
+INLINE_LINK_PATTERN = re.compile(
+    r"(?<!!)\[(?:[^\]\\]|\\.)*\]\(\s*(<[^>]*>|[^)\s]*)(?:\s+(?:\"[^\"]*\"|'[^']*'|\([^)]*\)))?\s*\)"
+)
+
+# Reference-style link definitions: [label]: target
+REFERENCE_LINK_PATTERN = re.compile(
+    r"^[ \t]{0,3}\[(?:[^\]\\]|\\.)+\]:[ \t]*(<[^>]*>|\S+)", re.MULTILINE
+)
 
 # --------------------------------------------------------------------------
 # Helpers
@@ -165,8 +200,16 @@ def _construct_unique_mapping(loader, node, deep=False):
         key = loader.construct_object(key_node, deep=deep)
         try:
             duplicate = key in mapping
-        except TypeError:  # unhashable key, cannot be a duplicate
-            duplicate = False
+        except TypeError:
+            # An unhashable key cannot be stored in a mapping. PyYAML raises a
+            # bare TypeError for this; it is turned into a normal YAML error
+            # so that the validator reports the problem instead of crashing.
+            raise yaml.constructor.ConstructorError(
+                "while constructing a mapping",
+                node.start_mark,
+                f"found unhashable key of type {type(key).__name__}",
+                key_node.start_mark,
+            )
         if duplicate:
             raise yaml.constructor.ConstructorError(
                 "while constructing a mapping",
@@ -193,7 +236,7 @@ def parse_yaml_text(text):
 
 def schema_errors(name, data, schema):
     """Validate a document against a JSON Schema. Returns a list of error strings."""
-    validator = Draft7Validator(schema)
+    validator = schema_validator(schema)(schema)
     errors = []
     for error in sorted(validator.iter_errors(data), key=lambda e: list(e.path)):
         location = "/".join(str(part) for part in error.absolute_path) or "<document>"
@@ -214,9 +257,8 @@ def boolean_key_errors(name, data):
         if isinstance(node, dict):
             for key in node.keys():
                 if isinstance(key, bool) or (isinstance(key, str) and key in BOOLEAN_KEY_NAMES):
-                    shown = repr(key)
                     errors.append(
-                        f"{trail}.{shown}: key is parsed as a boolean by YAML and is rejected by GitHub"
+                        f"{trail}.{key!r}: key is parsed as a boolean by YAML and is rejected by GitHub"
                     )
                 walk(node[key], f"{trail}.{key!r}")
         elif isinstance(node, list):
@@ -228,7 +270,11 @@ def boolean_key_errors(name, data):
 
 
 def form_rule_errors(name, data, expected_labels=None):
-    """Organization-specific form rules that a JSON Schema cannot express."""
+    """Organization-specific form rules that a JSON Schema cannot express.
+
+    Every value is type-checked before it is used. A malformed but parseable
+    document must produce a list of errors, never a traceback.
+    """
     errors = []
     if not isinstance(data, dict):
         return [f"{name}: the document must be a mapping"]
@@ -238,8 +284,12 @@ def form_rule_errors(name, data, expected_labels=None):
         if not isinstance(labels, list):
             errors.append(f"{name}: 'labels' must be a list")
         else:
-            for label in labels:
-                if label not in expected_labels:
+            for index, label in enumerate(labels):
+                if not isinstance(label, str):
+                    errors.append(
+                        f"{name}: labels[{index}]: must be a string, got {type(label).__name__}"
+                    )
+                elif label not in expected_labels:
                     errors.append(
                         f"{name}: label '{label}' is not one of the labels declared for the "
                         f"organization forms ({sorted(expected_labels)}). It must exist in every "
@@ -273,9 +323,17 @@ def form_rule_errors(name, data, expected_labels=None):
 
         if "id" in item:
             item_id = item["id"]
-            if not isinstance(item_id, str) or not ID_PATTERN.match(item_id):
-                errors.append(f"{where}: id '{item_id}' may only contain letters, numbers, '-' and '_'")
-            ids.append(item_id)
+            if not isinstance(item_id, str):
+                errors.append(
+                    f"{where}: id must be a string, got {type(item_id).__name__}"
+                )
+            else:
+                if not ID_PATTERN.match(item_id):
+                    errors.append(
+                        f"{where}: id '{item_id}' may only contain letters, numbers, '-' and '_'"
+                    )
+                # Only valid, hashable identifiers take part in duplicate detection.
+                ids.append(item_id)
 
         if item_type == "markdown" and "id" in item:
             errors.append(f"{where}: a markdown element must not declare an id")
@@ -290,7 +348,8 @@ def form_rule_errors(name, data, expected_labels=None):
                     if isinstance(option, str):
                         texts.append(option)
                     elif isinstance(option, dict):
-                        texts.append(str(option.get("label", "")))
+                        label = option.get("label")
+                        texts.append(label if isinstance(label, str) else str(label))
                     else:
                         # A bare scalar here is already a YAML type error, and a
                         # boolean is the case worth reporting explicitly.
@@ -321,15 +380,20 @@ def validate_form_document(name, data, schema, expected_labels=None):
     return errors
 
 
-def validate_config_document(name, data):
-    """Validate the issue template chooser configuration. Returns error strings."""
-    errors = schema_errors(name, data, ISSUE_CONFIG_SCHEMA)
+def validate_config_document(name, data, schema):
+    """Validate the issue template chooser configuration. Returns error strings.
+
+    The schema is passed in explicitly so that the configuration is always
+    checked against the schema that belongs to the repository being validated.
+    """
+    errors = schema_errors(name, data, schema)
     errors.extend(boolean_key_errors(name, data))
     if isinstance(data, dict):
         links = data.get("contact_links")
         if isinstance(links, list):
             for index, link in enumerate(links):
                 if not isinstance(link, dict):
+                    errors.append(f"{name}: contact_links[{index}]: must be a mapping")
                     continue
                 url = link.get("url")
                 if isinstance(url, str) and not re.match(r"^https?://", url):
@@ -343,21 +407,70 @@ def validate_config_document(name, data):
     return errors
 
 
+def guarded(label, function, *args):
+    """Run a validation function, turning an unexpected failure into an error.
+
+    A malformed document must produce a readable validation error rather than
+    an unhandled traceback.
+    """
+    try:
+        return function(*args)
+    except Exception as exc:  # noqa: BLE001
+        return [f"{label}: internal validation error: {type(exc).__name__}: {exc}"]
+
+
 # --------------------------------------------------------------------------
 # Repository-wide checks
 # --------------------------------------------------------------------------
 
 
+def strip_code_blocks(text):
+    """Remove fenced code blocks so their contents are not parsed as Markdown.
+
+    Without this, a link or heading inside an example block would be
+    validated as if it were real content.
+    """
+    kept = []
+    fence = None
+    for line in text.split("\n"):
+        stripped = line.strip()
+        if fence is None:
+            if stripped.startswith("```") or stripped.startswith("~~~"):
+                fence = stripped[:3]
+                continue
+            kept.append(line)
+        elif stripped.startswith(fence):
+            fence = None
+    return "\n".join(kept)
+
+
+def slugify(text):
+    """Turn heading text into a GitHub-style anchor slug."""
+    text = text.strip().lower()
+    text = re.sub(r"[^\w\s-]", "", text, flags=re.UNICODE)
+    return re.sub(r"\s+", "-", text)
+
+
 def headings(path):
+    """Return the set of anchors a Markdown file defines.
+
+    GitHub gives a repeated heading a numeric suffix, so the second '## Usage'
+    becomes '#usage-1'. The same rule is applied here so that a link to
+    either occurrence is accepted.
+    """
     with open(path, encoding="utf-8") as handle:
         text = handle.read()
     anchors = set()
-    for line in text.split("\n"):
+    counts = {}
+    for line in strip_code_blocks(text).split("\n"):
         match = re.match(r"^(#{1,6})\s+(.*)$", line)
         if match:
-            anchor = match.group(2).strip().lower()
-            anchor = re.sub(r"[^\w\s-]", "", anchor)
-            anchors.add(re.sub(r"\s+", "-", anchor))
+            base = slugify(match.group(2))
+            if not base:
+                continue
+            seen = counts.get(base, 0)
+            counts[base] = seen + 1
+            anchors.add(base if seen == 0 else f"{base}-{seen}")
     return anchors
 
 
@@ -371,15 +484,73 @@ def repo_files(root, suffixes):
     return sorted(found)
 
 
+def extract_link_targets(text):
+    """Return the link targets in a Markdown document.
+
+    Both inline links and reference-style link definitions are collected.
+    Fenced code blocks are excluded.
+    """
+    body = strip_code_blocks(text)
+    targets = []
+    for match in INLINE_LINK_PATTERN.finditer(body):
+        targets.append(match.group(1))
+    for match in REFERENCE_LINK_PATTERN.finditer(body):
+        targets.append(match.group(1))
+    return targets
+
+
+def split_link_target(target):
+    """Split a Markdown link target into (path, anchor, query).
+
+    Returns (None, None, None) for a target that points somewhere other than
+    a file in this repository.
+    """
+    target = target.strip()
+    if target.startswith("<") and target.endswith(">"):
+        target = target[1:-1].strip()
+    if not target or target.startswith("#"):
+        return "", target[1:] if target.startswith("#") else None, None
+    if re.match(r"^[A-Za-z][A-Za-z0-9+.-]*:", target):
+        # An absolute URL with a scheme, including mailto:.
+        return None, None, None
+    path, _, fragment = target.partition("#")
+    path, _, query = path.partition("?")
+    if not path:
+        return "", fragment or None, query or None
+    return urllib.parse.unquote(path), fragment or None, query or None
+
+
+def _is_within(root, path):
+    """True when path is the root itself or sits underneath it."""
+    try:
+        return os.path.commonpath([root, path]) == root
+    except ValueError:
+        # Different drives on Windows, or a mix of absolute and relative paths.
+        return False
+
+
 def resolve_within(root, relative):
     """Resolve a repository-relative path and confirm it stays inside root.
 
+    The root and the candidate are canonicalized, so a symbolic link inside
+    the repository that points outside it is rejected rather than followed.
+
     Returns the absolute path, or None when the target escapes the repository.
     """
-    resolved = os.path.normpath(os.path.join(root, relative.replace("/", os.sep)))
-    if resolved != root and not resolved.startswith(root + os.sep):
+    if relative is None:
         return None
-    return resolved
+    try:
+        canonical_root = os.path.realpath(root)
+        candidate = os.path.join(canonical_root, relative.replace("/", os.sep))
+        # Reject an obviously outside path before touching the filesystem.
+        if not _is_within(canonical_root, os.path.normpath(candidate)):
+            return None
+        canonical = os.path.realpath(candidate)
+    except (OSError, ValueError):
+        return None
+    if not _is_within(canonical_root, canonical):
+        return None
+    return canonical
 
 
 def run_checks(root):
@@ -427,20 +598,41 @@ def run_checks(root):
                     "so it is validated as an issue form by default"
                 )
             errors.extend(
-                validate_form_document(name, parsed[name], schemas["issue_form"], EXPECTED_LABELS)
+                guarded(
+                    name,
+                    validate_form_document,
+                    name,
+                    parsed[name],
+                    schemas["issue_form"],
+                    EXPECTED_LABELS,
+                )
             )
 
     vuln_name = ".github/VULNERABILITY_REPORT.yml"
     if vuln_name in parsed:
         validated_forms.add(vuln_name)
         errors.extend(
-            validate_form_document(vuln_name, parsed[vuln_name], schemas["vulnerability_form"])
+            guarded(
+                vuln_name,
+                validate_form_document,
+                vuln_name,
+                parsed[vuln_name],
+                schemas["vulnerability_form"],
+            )
         )
 
     config_name = ".github/ISSUE_TEMPLATE/config.yml"
     if config_name in parsed:
         validated_forms.add(config_name)
-        errors.extend(validate_config_document(config_name, parsed[config_name]))
+        errors.extend(
+            guarded(
+                config_name,
+                validate_config_document,
+                config_name,
+                parsed[config_name],
+                schemas["issue_config"],
+            )
+        )
 
     for name in FORM_FILES:
         if name not in validated_forms:
@@ -466,32 +658,31 @@ def run_checks(root):
     for name, path in markdown_files.items():
         with open(path, encoding="utf-8") as handle:
             text = handle.read()
-        for _, url in LINK_PATTERN.findall(text):
-            if url.startswith(("http://", "https://", "mailto:")):
+        for raw_target in extract_link_targets(text):
+            relative, anchor, _query = split_link_target(raw_target)
+            if relative is None:
                 continue
-            if url.startswith("#"):
-                target, anchor = name, url[1:]
-            else:
+            if relative:
                 target = os.path.normpath(
-                    os.path.join(os.path.dirname(name), url.split("#")[0])
+                    os.path.join(os.path.dirname(name), relative)
                 ).replace(os.sep, "/")
-                anchor = url.split("#")[1] if "#" in url else None
-            if anchor is None and target != name:
                 linked.add(target)
+            else:
+                target = name
             resolved = resolve_within(root, target)
             if resolved is None:
                 errors.append(
-                    f"{name}: link '{url}' resolves outside the repository and was rejected"
+                    f"{name}: link '{raw_target}' resolves outside the repository and was rejected"
                 )
                 continue
             if not os.path.exists(resolved):
-                errors.append(f"{name}: link '{url}' points to '{target}', which does not exist")
+                errors.append(f"{name}: link '{raw_target}' points to '{target}', which does not exist")
                 continue
             if anchor:
                 if target not in markdown_files:
-                    errors.append(f"{name}: link '{url}' has an anchor but '{target}' is not a Markdown file")
+                    errors.append(f"{name}: link '{raw_target}' has an anchor but '{target}' is not a Markdown file")
                 elif anchor not in headings(markdown_files[target]):
-                    errors.append(f"{name}: link '{url}' points to an anchor that does not exist in '{target}'")
+                    errors.append(f"{name}: link '{raw_target}' points to an anchor that does not exist in '{target}'")
 
     # Markdown that nothing links to is hard to find. The organization profile
     # README is linked from the repository root, so only documents below the

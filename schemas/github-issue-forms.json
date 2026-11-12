@@ -2405,5 +2405,6 @@
     "body"
   ],
   "title": "GitHub issue forms config file schema",
-  "type": "object"
+  "type": "object",
+  "x-naabtech-modification": "Modified by NaaB Tech. Change: added the 'min_length' validation to the 'input' and 'textarea' elements, which GitHub's form schema documentation lists as supported but the upstream SchemaStore schema omits. No other part of the upstream schema was changed. Upstream file: src/schemas/json/github-issue-forms.json in https://github.com/SchemaStore/schemastore (Apache License 2.0). See schemas/README.md and schemas/PROVENANCE.json."
 }

@@ -58,7 +58,10 @@ Nothing here is application code. It is documentation and configuration, maintai
 │   ├── github-vulnerability-report-form.json
 │   │                                   # Derived schema for vulnerability forms
 │   ├── PROVENANCE.json                # Where each schema came from, and when
-│   └── README.md                      # Schema sources, licensing, and maintenance
+│   ├── README.md                      # Schema sources, licensing, and maintenance
+│   └── third-party/
+│       ├── LICENSE-Apache-2.0.txt     # Licence text covering the vendored schemas
+│       └── NOTICE-SchemaStore.txt     # Upstream notice attribution
 ├── scripts/
 │   ├── validate_docs.py               # File, form, and link validation
 │   ├── test_validate_docs.py          # Validator tests: negative cases and positive controls
@@ -164,8 +167,8 @@ Anything not on this list must be confirmed with the organization owners before 
 GitHub does not use an organization's `.github` repository as the source of a default license for other projects, so each software project needs its own license. That is a separate matter from licensing the contents of *this* repository — its documentation, the Python scripts, and the vendored schemas.
 
 - Until a license is chosen, the contents of this repository are **not** licensed for reuse. The public visibility of the repository does not grant permission to copy or redistribute it.
-- The two vendored upstream schemas are redistributed under the **Apache-2.0** license of the [SchemaStore](https://github.com/SchemaStore/schemastore) repository. See [`schemas/README.md`](schemas/README.md) and `schemas/PROVENANCE.json` for the attribution and hashes.
-- `github-vulnerability-report-form.json` is derived in this repository from one of those upstream schemas and is covered by the same terms.
+- **The vendored schemas are a separate matter and are already covered.** The two schemas taken from [SchemaStore](https://github.com/SchemaStore/schemastore) are redistributed under that repository's **Apache-2.0** license, with the licence text at [`schemas/third-party/LICENSE-Apache-2.0.txt`](schemas/third-party/LICENSE-Apache-2.0.txt) and the upstream notice at [`schemas/third-party/NOTICE-SchemaStore.txt`](schemas/third-party/NOTICE-SchemaStore.txt). The modified schema carries a notice stating what was changed, and the derived schema is identified as a derived work. See [`schemas/README.md`](schemas/README.md) and `schemas/PROVENANCE.json`.
+- **No root-level `LICENSE` file was added**, because adding one would imply that the whole repository had been licensed.
 
 Selecting a license for this repository requires the owners' approval and, where appropriate, legal review.
 

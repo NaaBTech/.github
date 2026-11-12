@@ -1,18 +1,24 @@
 {
-  "retrieved_utc": "2026-11-12T22:13:04Z",
+  "retrieved_utc": "2026-11-12T22:38:16Z",
   "source": "https://www.schemastore.org/",
   "upstream_repository": "https://github.com/SchemaStore/schemastore",
   "upstream_license": "Apache-2.0",
-  "upstream_license_note": "The vendored schema files carry no individual licence header. They are distributed as part of the SchemaStore repository, which is licensed under Apache-2.0.",
+  "upstream_license_note": "The vendored schema files carry no individual license header. They are distributed as part of the SchemaStore repository, which is licensed under Apache-2.0. A copy of that license is at schemas/third-party/LICENSE-Apache-2.0.txt and the upstream notice is at schemas/third-party/NOTICE-SchemaStore.txt.",
+  "modification_notice": {
+    "key": "x-naabtech-modification",
+    "github-issue-forms.json": "Modified by NaaB Tech. Change: added the 'min_length' validation to the 'input' and 'textarea' elements, which GitHub's form schema documentation lists as supported but the upstream SchemaStore schema omits. No other part of the upstream schema was changed. Upstream file: src/schemas/json/github-issue-forms.json in https://github.com/SchemaStore/schemastore (Apache License 2.0). See schemas/README.md and schemas/PROVENANCE.json.",
+    "github-vulnerability-report-form.json": "Derived work created by NaaB Tech. This schema was generated from the vendored github-issue-forms.json by restricting the element types and the top-level keys that GitHub documents as supported for private vulnerability reporting forms. It is not a schema published by GitHub. See schemas/README.md and schemas/PROVENANCE.json."
+  },
   "schemas": {
     "github-issue-forms.json": {
       "upstream_url": "https://www.schemastore.org/github-issue-forms.json",
       "upstream_repository_path": "src/schemas/json/github-issue-forms.json",
       "upstream_sha256": "c2722dbf00334ce4fdeffa960b8c9047caf4f1cbb8f3809663f4d604b1d3ae76",
-      "vendored_sha256": "02d42c8172640557a49cfdd4e7f16e6a5a7064e8cd9f1f50bcc5bf1e4f97ba57",
+      "vendored_sha256": "e2e2114c10a5d34010b6a858ebe45251c72a84bb37d162824b50918783ae9c5d",
       "upstream_license": "Apache-2.0",
       "patched": true,
-      "derived": false
+      "derived": false,
+      "modification_notice_key": "x-naabtech-modification"
     },
     "github-issue-config.json": {
       "upstream_url": "https://www.schemastore.org/github-issue-config.json",
@@ -21,16 +27,34 @@
       "vendored_sha256": "ae126343168fb93606c548210b224409fd0600ecfd97ef1f3b7262dda5c8d3c3",
       "upstream_license": "Apache-2.0",
       "patched": false,
-      "derived": false
+      "derived": false,
+      "modification_notice_key": null
     },
     "github-vulnerability-report-form.json": {
       "derived_from": "github-issue-forms.json",
       "upstream_url": "https://docs.github.com/en/code-security/how-tos/report-and-fix-vulnerabilities/configure-vulnerability-reporting/configure-for-a-repository",
-      "vendored_sha256": "8381bd9b9d7cecbe57fb37000bc65d9a86b25fe76c51f553afd17fd97d130ccf",
+      "vendored_sha256": "305f0be26a91ea5a4aca3d4fac17bb4717eb36ef836c664601f47e03346b6c89",
       "upstream_license": "Apache-2.0",
       "license_note": "Derived in this repository from github-issue-forms.json. The restriction to the element types and top-level keys documented by GitHub is NaaB Tech's own work. This is not a schema published by GitHub.",
       "patched": false,
-      "derived": true
+      "derived": true,
+      "modification_notice_key": "x-naabtech-modification"
+    }
+  },
+  "third_party": {
+    "third-party/LICENSE-Apache-2.0.txt": {
+      "upstream_url": "https://raw.githubusercontent.com/SchemaStore/schemastore/master/LICENSE",
+      "upstream_sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "vendored_sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+      "upstream_license": "Apache-2.0",
+      "role": "license text"
+    },
+    "third-party/NOTICE-SchemaStore.txt": {
+      "upstream_url": "https://raw.githubusercontent.com/SchemaStore/schemastore/master/NOTICE",
+      "upstream_sha256": "8ef971b09c8988fab0872f534432611ba90611ed93da61cb9cf2722c69a570ef",
+      "vendored_sha256": "8ef971b09c8988fab0872f534432611ba90611ed93da61cb9cf2722c69a570ef",
+      "upstream_license": "Apache-2.0",
+      "role": "upstream notice attribution"
     }
   }
 }
