@@ -718,9 +718,13 @@ def run():
     symlink_supported = True
     symlink_reason = ""
     link_dir = None
+    outside_dir = None
     try:
         link_dir = tempfile.mkdtemp()
-        outside_target = os.path.join(link_dir, "outside.md")
+        # The escaping target has to live outside the directory that is
+        # treated as the repository root, otherwise the link is legitimate.
+        outside_dir = tempfile.mkdtemp()
+        outside_target = os.path.join(outside_dir, "outside.md")
         with open(outside_target, "w", encoding="utf-8") as handle:
             handle.write("# Outside\n")
         internal_target = os.path.join(link_dir, "internal.md")
@@ -737,6 +741,9 @@ def run():
         if link_dir:
             shutil.rmtree(link_dir, ignore_errors=True)
             link_dir = None
+        if outside_dir:
+            shutil.rmtree(outside_dir, ignore_errors=True)
+            outside_dir = None
 
     if symlink_supported:
         behaviour += 1
@@ -745,9 +752,12 @@ def run():
         behaviour += 1
         if resolve_within(link_dir, "inside.md") is None:
             failures.append("path containment: a symlink pointing to an internal file was rejected")
-        shutil.rmtree(link_dir, ignore_errors=True)
     else:
         print(f"  skipped 2 symlink case(s): symbolic links are not available here ({symlink_reason})")
+
+    for directory in (link_dir, outside_dir):
+        if directory:
+            shutil.rmtree(directory, ignore_errors=True)
 
     # The same rule is exercised on every platform by simulating what a
     # symbolic link resolves to, so the containment decision is covered even
@@ -974,6 +984,28 @@ def run():
             )
     finally:
         shutil.rmtree(temp_root, ignore_errors=True)
+
+    behaviour += 1
+    downloads = {
+        name: open(os.path.join(SCHEMA_SOURCE_DIR, name), "rb").read()
+        for name in ("github-issue-forms.json", "github-issue-config.json")
+    }
+    for name in update_schemas.UPSTREAM_THIRD_PARTY:
+        downloads[name] = open(
+            os.path.join(SCHEMA_SOURCE_DIR, name.replace("/", os.sep)), "rb"
+        ).read()
+    rebuilt = update_schemas.build_artifacts(downloads)
+    for name in (
+        "github-issue-forms.json",
+        "github-issue-config.json",
+        "github-vulnerability-report-form.json",
+    ):
+        with open(os.path.join(SCHEMA_SOURCE_DIR, name), "rb") as handle:
+            current = handle.read()
+        if rebuilt[name] != current:
+            failures.append(
+                f"schema refresh: rebuilding {name} did not reproduce the vendored file"
+            )
 
     total = negative + positive + behaviour
     print(
