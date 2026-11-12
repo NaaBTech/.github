@@ -929,20 +929,20 @@ def run():
 
     behaviour += 1
     files, rejected = repo_files(discovery_root, (".md",))
-    names = {os.path.relpath(path, discovery_root).replace(os.sep, "/") for path in files}
+    names = {display for _path, display in files}
     if "docs/normal.md" not in names:
         failures.append(f"file discovery: a normal Markdown file was not found, got {sorted(names)}")
 
     behaviour += 1
     files, rejected = repo_files(discovery_root, (".yml",))
-    names = {os.path.relpath(path, discovery_root).replace(os.sep, "/") for path in files}
+    names = {display for _path, display in files}
     if ".github/ISSUE_TEMPLATE/forms.yml" not in names:
         failures.append(f"file discovery: a normal YAML file was not found, got {sorted(names)}")
 
     if symlink_cases:
         behaviour += 1
         files, rejected = repo_files(discovery_root, (".md",))
-        names = {os.path.relpath(path, discovery_root).replace(os.sep, "/") for path in files}
+        names = {display for _path, display in files}
         rejected_names = {name for name, _reason in rejected}
         if "external.md" in names:
             failures.append("file discovery: an external Markdown symlink entered the inventory")
@@ -953,7 +953,7 @@ def run():
 
         behaviour += 1
         files, rejected = repo_files(discovery_root, (".yml",))
-        names = {os.path.relpath(path, discovery_root).replace(os.sep, "/") for path in files}
+        names = {display for _path, display in files}
         rejected_names = {name for name, _reason in rejected}
         if "external.yml" in names:
             failures.append("file discovery: an external YAML symlink entered the inventory")
@@ -964,7 +964,7 @@ def run():
 
         behaviour += 1
         files, rejected = repo_files(discovery_root, (".md",))
-        names = {os.path.relpath(path, discovery_root).replace(os.sep, "/") for path in files}
+        names = {display for _path, display in files}
         if "internal.md" not in names:
             failures.append("file discovery: an internal Markdown symlink was not accepted")
         if "alias.md" not in names:
@@ -980,7 +980,7 @@ def run():
 
         behaviour += 1
         files, rejected = repo_files(discovery_root, (".md",))
-        names = {os.path.relpath(path, discovery_root).replace(os.sep, "/") for path in files}
+        names = {display for _path, display in files}
         if "linkdir/docs/normal.md" not in names:
             failures.append(
                 "file discovery: a symlinked directory inside the repository was not followed, "

@@ -483,54 +483,55 @@ def repo_files(root, suffixes):
 
     A symbolic link whose canonical destination is outside the repository is
     never opened and never enters the inventory. Symlinked directories are
-    followed only when they resolve inside the repository, and a set of visited
-    real paths stops a cycle from causing unbounded recursion.
+    followed only when they resolve inside the repository, and the files they
+    contain are reported under the path as written, so that a link through
+    the alias resolves. A cycle is detected by the chain of real directories
+    currently being walked, so a link back to an ancestor is not followed.
 
-    Returns (files, rejected). ``rejected`` holds (repository-relative path,
-    reason) for everything that was skipped.
+    Returns (files, rejected). ``files`` holds (path, repository-relative
+    name) pairs; ``rejected`` holds (repository-relative path, reason) for
+    everything that was skipped.
     """
     canonical_root = os.path.realpath(root)
     found = []
     rejected = []
-    visited = set()
 
-    def relative(path):
-        return os.path.relpath(path, root).replace(os.sep, "/")
-
-    def walk(directory):
+    def walk(directory, chain, display):
         real_dir = os.path.realpath(directory)
-        if real_dir in visited:
+        if real_dir in chain:
+            # A link back to a directory already being walked.
             return
-        visited.add(real_dir)
+        chain = chain | {real_dir}
         try:
             entries = sorted(os.listdir(directory))
         except OSError:
             return
         for name in entries:
             path = os.path.join(directory, name)
+            shown = os.path.join(display, name)
             if os.path.islink(path):
                 target = os.path.realpath(path)
                 if not _is_within(canonical_root, target):
-                    rejected.append((relative(path), "points outside the repository"))
+                    rejected.append((shown.replace(os.sep, "/"), "points outside the repository"))
                     continue
                 if not os.path.exists(target):
-                    rejected.append((relative(path), "points to a target that does not exist"))
+                    rejected.append((shown.replace(os.sep, "/"), "points to a target that does not exist"))
                     continue
                 if os.path.isdir(target):
-                    walk(target)
+                    walk(target, chain, shown)
                     continue
                 if name.endswith(suffixes):
-                    found.append(path)
+                    found.append((path, shown.replace(os.sep, "/")))
                 continue
             if name in EXCLUDED_DIRECTORIES and os.path.isdir(path):
                 continue
             if os.path.isdir(path):
-                walk(path)
+                walk(path, chain, shown)
             elif name.endswith(suffixes):
-                found.append(path)
+                found.append((path, shown.replace(os.sep, "/")))
 
-    walk(root)
-    return sorted(found), sorted(set(rejected))
+    walk(root, frozenset(), "")
+    return sorted(found, key=lambda item: item[1]), sorted(set(rejected))
 
 
 def required_file_status(root, relative):
@@ -648,8 +649,7 @@ def run_checks(root):
     yaml_files, yaml_rejected = repo_files(root, (".yml", ".yaml"))
     for name, reason in yaml_rejected:
         rejected[name] = reason
-    for path in yaml_files:
-        name = os.path.relpath(path, root).replace(os.sep, "/")
+    for path, name in yaml_files:
         with open(path, encoding="utf-8") as handle:
             text = handle.read()
         data, error = parse_yaml_text(text)
@@ -662,8 +662,7 @@ def run_checks(root):
     markdown_paths, markdown_rejected = repo_files(root, (".md",))
     for name, reason in markdown_rejected:
         rejected[name] = reason
-    for path in markdown_paths:
-        name = os.path.relpath(path, root).replace(os.sep, "/")
+    for path, name in markdown_paths:
         markdown_files[name] = path
     for name, reason in sorted(rejected.items()):
         errors.append(f"{name}: was not validated because the file {reason}")
@@ -741,12 +740,6 @@ def run_checks(root):
             f"label '{label}' is declared for the organization forms but no form applies it"
         )
 
-    markdown_files = {}
-    markdown_rejected = []
-    markdown_paths, markdown_rejected = repo_files(root, (".md",))
-    for path in markdown_paths:
-        name = os.path.relpath(path, root).replace(os.sep, "/")
-        markdown_files[name] = path
     linked = set()
     for name, path in markdown_files.items():
         with open(path, encoding="utf-8") as handle:
