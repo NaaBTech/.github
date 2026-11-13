@@ -124,6 +124,8 @@ The identifier is unique and is never reused. A later transaction therefore **ca
 
 The rollback is itself failure-safe. If a backup cannot be restored, that backup is **not** deleted — it is the only remaining recoverable copy of that file — and its path is reported on standard error and in the raised error. The failed files are named, and the recoverable copies are left in one clearly identified transaction directory.
 
+Not every file has a backup. An artifact that did not exist before the promotion has no original copy, so there is nothing to restore and no backup to keep. If that file cannot be removed again during the rollback, it is reported as a residual file instead: the report states that it did not exist before the update, gives the path of the file that was left behind, and says that it has to be inspected and removed by hand. A recoverable copy is never claimed for a file that has none, and the command line does not tell you to restore every affected file from the recovery directory.
+
 A successful promotion removes only its own transaction directory, and only the empty directories inside it, so a nested artifact path such as `third-party/NOTICE-SchemaStore.txt` leaves no empty child directory behind. A directory that still holds an un-restored backup is never removed, and every path that could not be removed is reported.
 
 Concurrent refreshes are prevented by the lock file `schemas/.naabtech-update.lock`. If the file exists when a refresh starts, the refresh stops and says so. If no refresh is in progress and the file is stale, it can be removed by hand.

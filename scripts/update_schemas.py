@@ -478,6 +478,47 @@ def release_update_lock(path):
         sys.stderr.write(f"update_schemas: could not remove the lock {path}: {exc}\n")
 
 
+def rollback_summary(promotion_error, failures, transaction_dir):
+    """Describe a rollback that did not fully succeed.
+
+    A file whose original copy is recoverable is reported with the exact path
+    of the backup that was kept. A file that the update created is reported as
+    a residual file: it had no original copy, so there is no backup for it and
+    nothing to restore. The two are never mixed up.
+    """
+    recoverable = [(name, path) for kind, name, path, _ in failures if kind == "backup"]
+    residual = [(name, path) for kind, name, path, _ in failures if kind == "new"]
+    missing = [(name, path) for kind, name, path, _ in failures if kind == "missing"]
+    details = []
+    if recoverable:
+        details.append(
+            "the original copies are recoverable and are kept in the transaction directory "
+            f"{transaction_dir}: "
+            + ", ".join(f"{name} at {path}" for name, path in recoverable)
+        )
+    if residual:
+        details.append(
+            "these files did not exist before the update, so there is no original backup "
+            "for them; the files the update created could not be removed and are left in "
+            "place, where they have to be inspected and removed by hand: "
+            + ", ".join(f"{name} at {path}" for name, path in residual)
+        )
+    if missing:
+        details.append(
+            "the original copy of these files is no longer present, so there is no backup "
+            "to keep; the files the update created could not be removed and are left in "
+            "place, where they have to be inspected by hand: "
+            + ", ".join(f"{name} at {path}" for name, path in missing)
+        )
+    summary = (
+        f"promotion failed ({promotion_error}) and {len(failures)} file(s) could not "
+        "be restored: " + ", ".join(name for _, name, _, _ in failures)
+    )
+    if details:
+        summary = summary + ". " + ". ".join(details) + "."
+    return summary
+
+
 def promote(artifacts, staging_dir, target_dir, trusted_root=None):
     """Move the staged files into place, rolling back on failure.
 
@@ -495,6 +536,11 @@ def promote(artifacts, staging_dir, target_dir, trusted_root=None):
     itself is failure-safe: a backup that cannot be restored is *not* deleted,
     because it is the only remaining recoverable copy of that file, and its
     location is reported instead.
+
+    An artifact that did not exist before the promotion has no original copy
+    and therefore no backup. If that file cannot be removed again during the
+    rollback, it is reported as a residual file that is left in place, and it
+    is never described as a recoverable copy.
 
     This is an exception rollback, not a filesystem transaction. A crash or a
     power loss between two replacements can still leave a mixture, and the
@@ -523,7 +569,12 @@ def promote(artifacts, staging_dir, target_dir, trusted_root=None):
     backups = {}        # name -> backup path, or None when the file is new
     promoted = []        # names that were successfully replaced
     restored = set()     # names whose original content is back in place
-    failures = []        # (name, error) for backups that could not be restored
+    # Each entry is (kind, name, path, error). The kind says what the
+    # failure means: "backup" when the original copy is recoverable and was
+    # deliberately kept, "new" when the artifact did not exist before the
+    # promotion and the file the promotion created could not be removed, and
+    # "missing" when the original copy is recorded but no longer on disk.
+    failures = []
     succeeded = False
 
     try:
@@ -555,8 +606,12 @@ def promote(artifacts, staging_dir, target_dir, trusted_root=None):
         for name in reversed(promoted):
             target = os.path.join(target_dir, name.replace("/", os.sep))
             backup = backups.get(name)
+            # An artifact that did not exist before the promotion has no
+            # original copy, and therefore no backup to restore from.
+            has_original = backup is not None
+            recoverable = has_original and os.path.exists(backup)
             try:
-                if backup is not None and os.path.exists(backup):
+                if recoverable:
                     # Copy to a temporary name and move it into place, so the
                     # destination is never left partially overwritten.
                     restore = contained_path(
@@ -572,18 +627,42 @@ def promote(artifacts, staging_dir, target_dir, trusted_root=None):
                     os.remove(target)
                     restored.add(name)
             except Exception as rollback_error:
-                failures.append((name, rollback_error))
-                # The backup is the only recoverable copy of this file. It is
-                # deliberately kept, and its location is reported.
-                sys.stderr.write(
-                    f"update_schemas: could not restore {name}: {rollback_error}\n"
-                    f"update_schemas: the recoverable copy is kept at {backup}\n"
-                )
+                if recoverable:
+                    failures.append(("backup", name, backup, rollback_error))
+                    # The backup is the only recoverable copy of this file. It
+                    # is deliberately kept, and its location is reported.
+                    sys.stderr.write(
+                        f"update_schemas: could not restore {name}: {rollback_error}\n"
+                        f"update_schemas: the recoverable copy is kept at {backup}\n"
+                    )
+                elif has_original:
+                    # The original copy is recorded but no longer on disk, so
+                    # there is nothing to restore from and nothing to keep.
+                    failures.append(("missing", name, target, rollback_error))
+                    sys.stderr.write(
+                        f"update_schemas: could not restore {name}: {rollback_error}\n"
+                        f"update_schemas: the original copy of {name} is no longer present at "
+                        f"{backup}, so there is no backup to keep\n"
+                        f"update_schemas: the file the update created is left at {target} "
+                        "and has to be inspected by hand\n"
+                    )
+                else:
+                    # The artifact did not exist before the promotion, so
+                    # there is no original copy and no backup to keep. The
+                    # file that the promotion created is left behind, and it
+                    # has to be inspected and removed by hand.
+                    failures.append(("new", name, target, rollback_error))
+                    sys.stderr.write(
+                        f"update_schemas: could not remove the newly created {name}: "
+                        f"{rollback_error}\n"
+                        f"update_schemas: {name} did not exist before the update, so there is "
+                        "no original backup for it\n"
+                        f"update_schemas: the file the update created is left at {target} "
+                        "and has to be inspected and removed by hand\n"
+                    )
         if failures:
             raise RollbackError(
-                f"promotion failed ({promotion_error}) and {len(failures)} file(s) could not "
-                "be restored: " + ", ".join(name for name, _ in failures)
-                + f". Recoverable copies are kept in {transaction_dir}"
+                rollback_summary(promotion_error, failures, transaction_dir)
             ) from promotion_error
         raise
     finally:
@@ -673,9 +752,11 @@ def main():
         sys.stderr.write(
             "schema refresh failed and the rollback was INCOMPLETE.\n"
             f"  {exc}\n"
-            "  The schema directory may contain partially updated files. Restore the\n"
-            "  affected files from the recovery directory above before running the\n"
-            "  refresh again.\n"
+            "  The schema directory may contain partially updated files. The files that\n"
+            "  had an original copy can be restored from the recovery directory above.\n"
+            "  The files that the update created could not be removed; they are named in\n"
+            "  the message above, and they have to be inspected and removed by hand.\n"
+            "  Do not run the refresh again before the schema directory has been checked.\n"
         )
         return 1
     except UpdateError as exc:
