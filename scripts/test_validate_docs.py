@@ -1674,9 +1674,9 @@ def run():
     # A concurrent refresh is refused while the lock is held.
     temp_root = make_temp_repo()
     try:
-        lock_path = update_schemas.acquire_update_lock(temp_root)
+        lock_path = update_schemas.acquire_update_lock(temp_root, temp_root)
         try:
-            update_schemas.acquire_update_lock(temp_root)
+            update_schemas.acquire_update_lock(temp_root, temp_root)
         except update_schemas.UpdateError:
             pass
         else:
@@ -1686,7 +1686,7 @@ def run():
         if os.path.exists(lock_path):
             failures.append("schema refresh: the lock file was not released")
         # The lock can be taken again once it has been released.
-        again = update_schemas.acquire_update_lock(temp_root)
+        again = update_schemas.acquire_update_lock(temp_root, temp_root)
         update_schemas.release_update_lock(again)
     finally:
         shutil.rmtree(temp_root, ignore_errors=True)
@@ -1783,11 +1783,23 @@ def run():
             }
 
         def no_external_content_copied(root):
-            """No file inside the repository may hold the sentinel content."""
+            """No file inside the repository may hold the sentinel content.
+
+            A symbolic link is not followed. A link still points at the
+            external file; it is not a copy of it, and the file behind it is
+            not part of the repository.
+            """
             stray = []
             for dirpath, dirnames, filenames in os.walk(root):
+                dirnames[:] = [
+                    name
+                    for name in dirnames
+                    if not os.path.islink(os.path.join(dirpath, name))
+                ]
                 for name in filenames:
                     path = os.path.join(dirpath, name)
+                    if os.path.islink(path):
+                        continue
                     try:
                         with open(path, "rb") as handle:
                             if handle.read() == sentinel_bytes:
@@ -1795,6 +1807,10 @@ def run():
                     except OSError:
                         continue
             return stray
+
+        def outside_entries(outside):
+            """The names that exist in the external directory."""
+            return sorted(os.listdir(outside))
 
         # 1. A schemas directory that points outside the repository.
         behaviour += 1
@@ -1804,16 +1820,33 @@ def run():
             shutil.rmtree(os.path.join(root, "schemas"))
             os.symlink(outside, os.path.join(root, "schemas"))
             try:
-                update_schemas.canonical_schema_dir()
+                update_schemas.canonical_schema_dir(root)
             except update_schemas.UpdateError:
                 pass
             else:
                 failures.append(
                     "schema updater: a schemas directory pointing outside the repository was accepted"
                 )
+            # Even if the first check were bypassed, the lock must not be
+            # created in the external directory either.
+            try:
+                update_schemas.acquire_update_lock(os.path.join(root, "schemas"), root)
+            except update_schemas.UpdateError:
+                pass
+            else:
+                failures.append(
+                    "schema updater: an update lock was taken in a schemas directory "
+                    "pointing outside the repository"
+                )
             ok, detail = outside_is_untouched(outside)
             if not ok:
                 failures.append(f"schema updater: the external sentinel was touched: {detail}")
+            # No lock, staging, backup or restore file may appear outside.
+            entries = outside_entries(outside)
+            if entries != ["sentinel.bin"]:
+                failures.append(
+                    f"schema updater: files were written outside the repository: {entries}"
+                )
             stray = no_external_content_copied(root)
             if stray:
                 failures.append(

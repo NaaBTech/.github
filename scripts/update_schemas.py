@@ -161,19 +161,27 @@ def contained_path(root, relative, description, allow_missing=False):
     return candidate
 
 
-def canonical_repository_root():
-    """The canonical repository root that every path is checked against."""
-    return os.path.realpath(ROOT)
+def canonical_repository_root(root=None):
+    """The canonical repository root that every path is checked against.
+
+    ``root`` defaults to the repository that holds this script. The parameter
+    exists so that the behaviour can be exercised against a temporary
+    directory without weakening the containment check.
+    """
+    return os.path.realpath(root) if root else os.path.realpath(ROOT)
 
 
-def canonical_schema_dir():
+def canonical_schema_dir(root=None):
     """The canonical schema directory, which must be inside the repository.
 
     A schemas directory that is a symbolic link to an internal directory is
     accepted, because it stays inside the repository. One that points outside
     is rejected before anything is read or written.
+
+    ``root`` is the repository the schema directory must sit inside. It
+    defaults to the repository that holds this script.
     """
-    canonical_root = canonical_repository_root()
+    canonical_root = canonical_repository_root(root)
     try:
         return contained_path(canonical_root, "schemas", "the schemas directory")
     except UpdateError as exc:
@@ -431,12 +439,22 @@ def cleanup_transaction_dir(transaction_dir, backup_root):
     return leftovers
 
 
-def acquire_update_lock(target_dir):
+def acquire_update_lock(target_dir, trusted_root=None):
     """Take the update lock so two refreshes cannot run at the same time.
 
     Returns the path of the lock file. Raises UpdateError when another
     refresh already holds it.
+
+    The schema directory is checked against the trusted root before the lock
+    is created, so a schema directory that points outside the repository
+    cannot redirect the lock file.
     """
+    root = os.path.realpath(trusted_root) if trusted_root else canonical_repository_root()
+    target_root = os.path.realpath(target_dir)
+    if not _is_within(root, target_root):
+        raise UpdateError(
+            f"the schema directory is outside the repository {root}: {target_dir}"
+        )
     path = contained_path(
         os.path.realpath(target_dir), LOCK_FILE_NAME, "the update lock", allow_missing=True
     )
@@ -601,13 +619,18 @@ def promote(artifacts, staging_dir, target_dir, trusted_root=None):
                 pass
 
 
-def refresh():
-    """Run a complete refresh. Returns the artifact set that was promoted."""
+def refresh(root=None):
+    """Run a complete refresh. Returns the artifact set that was promoted.
+
+    ``root`` is the repository the schema directory must sit inside. It
+    defaults to the repository that holds this script.
+    """
     # The canonical schema directory is resolved first. If it is a symbolic
     # link pointing outside the repository, the refresh stops before anything
     # is read, created or written.
-    schema_dir = canonical_schema_dir()
-    lock_path = acquire_update_lock(schema_dir)
+    repository_root = canonical_repository_root(root)
+    schema_dir = canonical_schema_dir(root)
+    lock_path = acquire_update_lock(schema_dir, repository_root)
     staging_dir = None
     try:
         downloads = {}
@@ -623,7 +646,7 @@ def refresh():
         staging_dir = tempfile.mkdtemp(prefix=".staging-", dir=schema_dir)
         stage_artifacts(artifacts, staging_dir)
         verify_staged(artifacts, staging_dir)
-        promote(artifacts, staging_dir, schema_dir)
+        promote(artifacts, staging_dir, schema_dir, repository_root)
     finally:
         if staging_dir:
             shutil.rmtree(staging_dir, ignore_errors=True)
