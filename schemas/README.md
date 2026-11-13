@@ -85,21 +85,42 @@ python scripts/update_schemas.py
 
 The script:
 
-1. Downloads both upstream schemas from SchemaStore, plus the upstream licence and NOTICE files.
-2. Parses every download and checks that each schema is a valid JSON Schema.
-3. Re-applies the `min_length` change and the Apache-2.0 section 4(b) modification notice to the issue forms schema, entirely in memory.
-4. Regenerates `github-vulnerability-report-form.json` from the patched issue forms schema.
-5. Builds the complete `PROVENANCE.json`, including every SHA-256.
-6. Writes the whole artifact set into a temporary staging directory beside this one.
-7. Verifies the staged files against the artifacts that were built, then promotes them into place.
+1. Takes the update lock, so two refreshes cannot run at the same time.
+2. Downloads both upstream schemas from SchemaStore, plus the upstream licence and NOTICE files.
+3. Parses every download and checks that each schema is a valid JSON Schema.
+4. Re-applies the `min_length` change and the Apache-2.0 section 4(b) modification notice to the issue forms schema, entirely in memory.
+5. Regenerates `github-vulnerability-report-form.json` from the patched issue forms schema.
+6. Builds the complete `PROVENANCE.json`, including every SHA-256.
+7. Writes the whole artifact set into a temporary staging directory beside this one.
+8. Verifies the staged files against the artifacts that were built, then promotes them into place.
+
+### Recovery copies are kept per transaction
+
+Every promotion gets its own directory below `schemas/.naabtech-backups/`:
+
+```text
+schemas/.naabtech-backups/
+├── transaction-<unique-id-1>/
+│   ├── github-issue-forms.json
+│   └── third-party/
+│       └── NOTICE-SchemaStore.txt
+└── transaction-<unique-id-2>/
+    └── ...
+```
+
+The identifier is unique and is never reused. A later transaction therefore **cannot** overwrite the recovery copy of an earlier one. Only the current transaction's directory is ever cleaned up; a directory from an earlier transaction, or one that still holds an un-restored backup, is left exactly as it is.
 
 **The refresh is transactional against exceptions.** Nothing is written to the live schema directory until every download, patch, derivation and hash has succeeded and the staged files have been verified. If promotion fails part way through, the previous content of every file is restored and the original artifact set is left byte-for-byte unchanged. The staging directory is removed whether the refresh succeeds or fails.
 
-**What that guarantee is, and what it is not.** The files are replaced one at a time, so the refresh is **not** a filesystem-level transaction. A crash or a power loss between two replacements can still leave a mixture of old and new schemas with stale provenance. What protects against that is the backup directory `schemas/.naabtech-backups/`: the original content of every file is kept there until the promotion has fully succeeded, and it is removed only when it is empty, so a stale recovery copy from an earlier failed run is never destroyed.
+**What that guarantee is, and what it is not.** The files are replaced one at a time, so the refresh is **not** a filesystem-level transaction. A crash or a power loss between two replacements can still leave a mixture of old and new schemas with stale provenance. What protects against that is the backup directory `schemas/.naabtech-backups/`: the original content of every file is kept there until the promotion has fully succeeded.
 
-The rollback is itself failure-safe. If a backup cannot be restored, that backup is **not** deleted — it is the only remaining recoverable copy of that file — and its path is reported on standard error and in the raised error. The failed files are named, and the recoverable copies are left in one clearly identified place.
+The rollback is itself failure-safe. If a backup cannot be restored, that backup is **not** deleted — it is the only remaining recoverable copy of that file — and its path is reported on standard error and in the raised error. The failed files are named, and the recoverable copies are left in one clearly identified transaction directory.
 
-The staging and the promotion are covered by failure-injection tests, including a forced failure during promotion that proves every file is restored, and a forced failure during restoration that proves the recoverable copy survives.
+A successful promotion removes only its own transaction directory, and only the empty directories inside it, so a nested artifact path such as `third-party/NOTICE-SchemaStore.txt` leaves no empty child directory behind. A directory that still holds an un-restored backup is never removed, and every path that could not be removed is reported.
+
+Concurrent refreshes are prevented by the lock file `schemas/.naabtech-update.lock`. If the file exists when a refresh starts, the refresh stops and says so. If no refresh is in progress and the file is stale, it can be removed by hand.
+
+The staging, the promotion, the rollback, the per-transaction isolation and the concurrent-update guard are covered by failure-injection tests: a forced failure during promotion that proves every file is restored, a forced failure during restoration that proves the recoverable copy survives, a second failed transaction that proves the earlier recovery copy is byte-for-byte unchanged, a successful transaction that proves an earlier recovery copy is untouched, a refused concurrent refresh, and a successful nested promotion that proves nothing is left behind.
 
 After refreshing:
 

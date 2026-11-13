@@ -39,6 +39,12 @@ except ImportError:  # pragma: no cover
     raise SystemExit(2)
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
+# Status codes returned by resolve_repository_path.
+PATH_OK = "ok"
+PATH_MISSING = "missing"
+PATH_BROKEN_LINK = "broken link"
+PATH_OUTSIDE = "outside the repository"
 SCHEMA_DIR = os.path.join(ROOT, "schemas")
 
 # --------------------------------------------------------------------------
@@ -57,24 +63,73 @@ def schema_validator(schema):
         return Draft7Validator
 
 
-def load_schema(schema_dir, name):
+def _broken_symlink_component(path):
+    """True when a component of the path is a symbolic link whose target is missing."""
+    current = os.path.dirname(path)
+    while current:
+        if os.path.islink(current) and not os.path.exists(current):
+            return True
+        parent = os.path.dirname(current)
+        if parent == current:
+            break
+        current = parent
+    return False
+
+
+def resolve_repository_path(root, relative):
+    """Resolve a repository-relative path safely.
+
+    The whole candidate path is canonicalized, so a symbolic link in *any*
+    parent component is resolved as well. A path whose canonical destination
+    lies outside the canonical repository root is rejected, and is never
+    opened or enumerated.
+
+    Returns (status, resolved_path). The status is one of PATH_OK,
+    PATH_MISSING, PATH_BROKEN_LINK or PATH_OUTSIDE. ``resolved_path`` is
+    only meaningful when the status is PATH_OK.
+    """
+    if relative is None:
+        return PATH_MISSING, None
+    try:
+        canonical_root = os.path.realpath(root)
+        candidate = os.path.join(canonical_root, relative.replace("/", os.sep))
+        resolved = os.path.realpath(candidate)
+    except (OSError, ValueError):
+        return PATH_MISSING, None
+    if not _is_within(canonical_root, resolved):
+        return PATH_OUTSIDE, None
+    if not os.path.lexists(candidate):
+        if _broken_symlink_component(candidate):
+            return PATH_BROKEN_LINK, None
+        return PATH_MISSING, None
+    return PATH_OK, resolved
+
+
+def load_schema(root, relative):
     """Load a vendored schema and verify that it is a valid JSON Schema.
 
-    Parsing a JSON document successfully does not mean the document is a valid
-    schema, so the schema is checked against its own declared meta-schema.
+    The schema path is resolved through the repository containment check
+    first, so a schema whose file, or whose parent directory, is a symbolic
+    link pointing outside the repository is never read.
+
+    Parsing a JSON document successfully does not mean the document is a
+    valid schema, so the schema is also checked against its own declared
+    meta-schema.
     """
-    path = os.path.join(schema_dir, name)
-    if not os.path.exists(path):
+    status, resolved = resolve_repository_path(root, relative)
+    if status == PATH_MISSING:
         raise SystemExit(
-            f"missing schema {name} in {schema_dir}. "
+            f"missing schema {relative} in {root}. "
             "Run scripts/update_schemas.py to vendor it."
         )
-    with open(path, encoding="utf-8") as handle:
+    if status != PATH_OK:
+        raise SystemExit(f"schema {relative} cannot be used: it is {status}")
+    with open(resolved, encoding="utf-8") as handle:
         schema = json.load(handle)
     try:
         schema_validator(schema).check_schema(schema)
     except Exception as exc:  # noqa: BLE001
-        raise SystemExit(f"{name} is not a valid JSON Schema: {exc}")
+        raise SystemExit(f"{relative} is not a valid JSON Schema: {exc}")
     return schema
 
 
@@ -85,18 +140,13 @@ def load_schemas(root):
     directory this script happens to live in, so that validating a different
     checkout uses that checkout's schemas.
     """
-    schema_dir = os.path.join(root, "schemas")
     return {
-        "issue_form": load_schema(schema_dir, "github-issue-forms.json"),
-        "vulnerability_form": load_schema(schema_dir, "github-vulnerability-report-form.json"),
-        "issue_config": load_schema(schema_dir, "github-issue-config.json"),
+        "issue_form": load_schema(root, "schemas/github-issue-forms.json"),
+        "vulnerability_form": load_schema(root, "schemas/github-vulnerability-report-form.json"),
+        "issue_config": load_schema(root, "schemas/github-issue-config.json"),
     }
 
 
-# The default repository's schemas, for direct use by the test suite.
-ISSUE_FORM_SCHEMA = load_schema(SCHEMA_DIR, "github-issue-forms.json")
-VULNERABILITY_FORM_SCHEMA = load_schema(SCHEMA_DIR, "github-vulnerability-report-form.json")
-ISSUE_CONFIG_SCHEMA = load_schema(SCHEMA_DIR, "github-issue-config.json")
 
 # --------------------------------------------------------------------------
 # Expectations
@@ -475,7 +525,11 @@ def headings(path):
 
 
 # Directories that are never part of the validated content.
-EXCLUDED_DIRECTORIES = {".git", "node_modules", "__pycache__", ".naabtech-backups"}
+EXCLUDED_DIRECTORIES = {".git", "node_modules", "__pycache__"}
+
+# Working directories used by scripts/update_schemas.py: the staging area and
+# the per-transaction backup directories.
+EXCLUDED_DIRECTORY_PREFIXES = (".staging-", ".naabtech-")
 
 
 def repo_files(root, suffixes):
@@ -492,7 +546,6 @@ def repo_files(root, suffixes):
     name) pairs; ``rejected`` holds (repository-relative path, reason) for
     everything that was skipped.
     """
-    canonical_root = os.path.realpath(root)
     found = []
     rejected = []
 
@@ -507,28 +560,27 @@ def repo_files(root, suffixes):
         except OSError:
             return
         for name in entries:
-            path = os.path.join(directory, name)
             shown = os.path.join(display, name)
-            if os.path.islink(path):
-                target = os.path.realpath(path)
-                if not _is_within(canonical_root, target):
-                    rejected.append((shown.replace(os.sep, "/"), "points outside the repository"))
-                    continue
-                if not os.path.exists(target):
-                    rejected.append((shown.replace(os.sep, "/"), "points to a target that does not exist"))
-                    continue
-                if os.path.isdir(target):
-                    walk(target, chain, shown)
-                    continue
-                if name.endswith(suffixes):
-                    found.append((path, shown.replace(os.sep, "/")))
+            relative = shown.replace(os.sep, "/")
+            # Every candidate goes through the containment check, so a
+            # symbolic link in any parent component is caught as well.
+            status, resolved = resolve_repository_path(root, relative)
+            if status == PATH_OUTSIDE:
+                rejected.append((relative, "points outside the repository"))
                 continue
-            if name in EXCLUDED_DIRECTORIES and os.path.isdir(path):
+            if status == PATH_BROKEN_LINK:
+                rejected.append((relative, "points to a target that does not exist"))
                 continue
-            if os.path.isdir(path):
-                walk(path, chain, shown)
-            elif name.endswith(suffixes):
-                found.append((path, shown.replace(os.sep, "/")))
+            if status == PATH_MISSING:
+                continue
+            if os.path.isdir(resolved):
+                if (name in EXCLUDED_DIRECTORIES
+                        or name.startswith(EXCLUDED_DIRECTORY_PREFIXES)):
+                    continue
+                walk(resolved, chain, shown)
+                continue
+            if name.endswith(suffixes):
+                found.append((resolved, relative))
 
     walk(root, frozenset(), "")
     return sorted(found, key=lambda item: item[1]), sorted(set(rejected))
@@ -537,20 +589,18 @@ def repo_files(root, suffixes):
 def required_file_status(root, relative):
     """Return (ok, reason) for a required file.
 
-    A required file that is a symbolic link pointing outside the repository is
-    reported as unusable and is never opened.
+    The whole path is canonicalized, so a required file whose parent
+    directory is a symbolic link pointing outside the repository is reported
+    as unusable and is never opened.
     """
-    path = os.path.join(root, relative.replace("/", os.sep))
-    if not os.path.lexists(path):
+    status, _resolved = resolve_repository_path(root, relative)
+    if status == PATH_OK:
+        return True, ""
+    if status == PATH_MISSING:
         return False, "is missing"
-    if os.path.islink(path):
-        canonical_root = os.path.realpath(root)
-        target = os.path.realpath(path)
-        if not _is_within(canonical_root, target):
-            return False, "is a symbolic link pointing outside the repository"
-        if not os.path.exists(target):
-            return False, "is a symbolic link whose target does not exist"
-    return True, ""
+    if status == PATH_BROKEN_LINK:
+        return False, "is a symbolic link whose target does not exist"
+    return False, "is a symbolic link pointing outside the repository"
 
 
 def extract_link_targets(text):
@@ -670,10 +720,18 @@ def run_checks(root):
 
     validated_forms = set()
 
-    issue_template_dir = os.path.join(root, ".github", "ISSUE_TEMPLATE")
-    if os.path.isdir(issue_template_dir):
+    template_status, template_dir = resolve_repository_path(root, ".github/ISSUE_TEMPLATE")
+    if template_status == PATH_OUTSIDE:
+        errors.append(
+            ".github/ISSUE_TEMPLATE: was not listed because the directory is outside the repository"
+        )
+    elif template_status == PATH_BROKEN_LINK:
+        errors.append(
+            ".github/ISSUE_TEMPLATE: was not listed because the directory is a broken symbolic link"
+        )
+    elif template_status == PATH_OK and os.path.isdir(template_dir):
         form_names = sorted(
-            name for name in os.listdir(issue_template_dir)
+            name for name in os.listdir(template_dir)
             if name.endswith((".yml", ".yaml")) and name != "config.yml"
         )
         for filename in form_names:
@@ -794,6 +852,15 @@ def main():
         return 1
     print(f"  no errors ({len(warnings)} warning(s))")
     return 0
+
+
+# The default repository's schemas, for direct use by the test suite. They are
+# loaded after every function is defined, because the containment helpers
+# they rely on are declared further down the module.
+# The default repository's schemas, for direct use by the test suite.
+ISSUE_FORM_SCHEMA = load_schema(ROOT, "schemas/github-issue-forms.json")
+VULNERABILITY_FORM_SCHEMA = load_schema(ROOT, "schemas/github-vulnerability-report-form.json")
+ISSUE_CONFIG_SCHEMA = load_schema(ROOT, "schemas/github-issue-config.json")
 
 
 if __name__ == "__main__":

@@ -5,7 +5,10 @@ __pycache__/
 # Node.js dependencies installed by npm.
 node_modules/
 
-# Backups kept by scripts/update_schemas.py when a promotion fails. A backup
-# that could not be restored is deliberately left here: it is the only
-# recoverable copy of that file.
+# Working files of scripts/update_schemas.py.
+# schemas/.naabtech-backups/ holds the per-transaction recovery copies. A backup
+# that could not be restored is deliberately left there: it is the only
+# recoverable copy of that file, and a later refresh must never overwrite it.
 schemas/.naabtech-backups/
+schemas/.naabtech-update.lock
+schemas/.staging-*/

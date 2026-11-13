@@ -109,6 +109,14 @@ class RollbackError(UpdateError):
 # backup that could not be restored is left here on purpose.
 BACKUP_DIR_NAME = ".naabtech-backups"
 
+# Every promotion transaction gets its own directory below the backup root, so
+# a later transaction can never overwrite the recovery copy of an earlier one.
+TRANSACTION_PREFIX = "transaction-"
+
+# Held for the duration of a refresh so that two refreshes cannot interfere
+# with each other's backup or promotion state.
+LOCK_FILE_NAME = ".naabtech-update.lock"
+
 
 def download(url):
     request = urllib.request.Request(url, headers={"User-Agent": "naabtech-docs-audit"})
@@ -323,6 +331,50 @@ def verify_staged(artifacts, staging_dir):
                 raise UpdateError(f"staged file is not valid JSON: {name}: {exc}")
 
 
+def cleanup_transaction_dir(transaction_dir):
+    """Remove a transaction directory and the empty directories inside it.
+
+    Directories are removed from the bottom up, so a nested artifact path such
+    as ``third-party/NOTICE-SchemaStore.txt`` leaves no empty child directory
+    behind. A directory that still holds a backup is never removed, and every
+    path that could not be removed is returned.
+    """
+    leftovers = []
+    for dirpath, _dirnames, _filenames in os.walk(transaction_dir, topdown=False):
+        try:
+            os.rmdir(dirpath)
+        except OSError:
+            leftovers.append(dirpath)
+    return leftovers
+
+
+def acquire_update_lock(target_dir):
+    """Take the update lock so two refreshes cannot run at the same time.
+
+    Returns the path of the lock file. Raises UpdateError when another
+    refresh already holds it.
+    """
+    path = os.path.join(target_dir, LOCK_FILE_NAME)
+    try:
+        handle = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+    except FileExistsError:
+        raise UpdateError(
+            f"another schema refresh appears to be running: {path} exists. "
+            "If no refresh is in progress, remove that file and try again."
+        )
+    with os.fdopen(handle, "w") as stream:
+        stream.write(f"pid={os.getpid()}\n")
+    return path
+
+
+def release_update_lock(path):
+    """Release the update lock. A failure here is reported, not raised."""
+    try:
+        os.remove(path)
+    except OSError as exc:
+        sys.stderr.write(f"update_schemas: could not remove the lock {path}: {exc}\n")
+
+
 def promote(artifacts, staging_dir, target_dir):
     """Move the staged files into place, rolling back on failure.
 
@@ -340,7 +392,11 @@ def promote(artifacts, staging_dir, target_dir):
     power loss between two replacements can still leave a mixture, and the
     backup directory is what makes that recoverable by hand.
     """
-    backup_dir = os.path.join(target_dir, BACKUP_DIR_NAME)
+    backup_root = os.path.join(target_dir, BACKUP_DIR_NAME)
+    os.makedirs(backup_root, exist_ok=True)
+    # A unique directory per transaction. A later transaction can therefore
+    # never overwrite the recovery copy of an earlier one.
+    transaction_dir = tempfile.mkdtemp(prefix=TRANSACTION_PREFIX, dir=backup_root)
     backups = {}        # name -> backup path, or None when the file is new
     promoted = []        # names that were successfully replaced
     restored = set()     # names whose original content is back in place
@@ -353,7 +409,8 @@ def promote(artifacts, staging_dir, target_dir):
             target = os.path.join(target_dir, name.replace("/", os.sep))
             os.makedirs(os.path.dirname(target), exist_ok=True)
             if os.path.exists(target):
-                backup = os.path.join(backup_dir, name.replace("/", os.sep))
+                # The backup keeps the nested artifact layout.
+                backup = os.path.join(transaction_dir, name.replace("/", os.sep))
                 os.makedirs(os.path.dirname(backup), exist_ok=True)
                 shutil.copy2(target, backup)
                 backups[name] = backup
@@ -389,7 +446,7 @@ def promote(artifacts, staging_dir, target_dir):
             raise RollbackError(
                 f"promotion failed ({promotion_error}) and {len(failures)} file(s) could not "
                 "be restored: " + ", ".join(name for name, _ in failures)
-                + f". Recoverable copies are kept under {backup_dir}"
+                + f". Recoverable copies are kept in {transaction_dir}"
             ) from promotion_error
         raise
     finally:
@@ -409,33 +466,45 @@ def promote(artifacts, staging_dir, target_dir):
                     f"update_schemas: could not remove the backup for {name}: {cleanup_error}\n"
                 )
         if not failures:
-            # The directory is removed only when it is empty, so a stale
-            # recovery copy from an earlier failed run is never destroyed.
+            # Only this transaction's directory is cleaned, and only the empty
+            # directories inside it. A recovery directory from an earlier
+            # transaction, or one that still holds an un-restored backup, is
+            # never removed.
+            for leftover in cleanup_transaction_dir(transaction_dir):
+                sys.stderr.write(
+                    f"update_schemas: could not remove {leftover}\n"
+                )
+            # The backup root is removed only when it is empty, so an earlier
+            # recovery directory is never destroyed.
             try:
-                os.rmdir(backup_dir)
+                os.rmdir(backup_root)
             except OSError:
                 pass
 
 
 def refresh():
     """Run a complete refresh. Returns the artifact set that was promoted."""
-    downloads = {}
-    for name, meta in UPSTREAM_SCHEMAS.items():
-        print(f"fetching {meta['url']}")
-        downloads[name] = download(meta["url"])
-    for name, url in UPSTREAM_THIRD_PARTY.items():
-        print(f"fetching {url}")
-        downloads[name] = download(url)
-
-    artifacts = build_artifacts(downloads)
-
-    staging_dir = tempfile.mkdtemp(prefix=".staging-", dir=SCHEMA_DIR)
+    lock_path = acquire_update_lock(SCHEMA_DIR)
+    staging_dir = None
     try:
+        downloads = {}
+        for name, meta in UPSTREAM_SCHEMAS.items():
+            print(f"fetching {meta['url']}")
+            downloads[name] = download(meta["url"])
+        for name, url in UPSTREAM_THIRD_PARTY.items():
+            print(f"fetching {url}")
+            downloads[name] = download(url)
+
+        artifacts = build_artifacts(downloads)
+
+        staging_dir = tempfile.mkdtemp(prefix=".staging-", dir=SCHEMA_DIR)
         stage_artifacts(artifacts, staging_dir)
         verify_staged(artifacts, staging_dir)
         promote(artifacts, staging_dir, SCHEMA_DIR)
     finally:
-        shutil.rmtree(staging_dir, ignore_errors=True)
+        if staging_dir:
+            shutil.rmtree(staging_dir, ignore_errors=True)
+        release_update_lock(lock_path)
 
     for name in artifacts:
         print(f"promoted schemas/{name}")

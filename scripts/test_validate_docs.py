@@ -20,6 +20,7 @@ Usage:
     python scripts/test_validate_docs.py
 """
 
+import json
 import os
 import shutil
 import sys
@@ -38,6 +39,7 @@ from validate_docs import (  # noqa: E402
     VULNERABILITY_FORM_SCHEMA,
     extract_link_targets,
     headings,
+    load_schemas,
     parse_yaml_text,
     repo_files,
     required_file_status,
@@ -587,7 +589,6 @@ def make_temp_repo(files=None, alternate_config_schema=None):
     return temp_root
 
 
-import json  # noqa: E402  (used by make_temp_repo)
 
 
 def run():
@@ -1026,6 +1027,223 @@ def run():
     shutil.rmtree(outside_root, ignore_errors=True)
 
     # ------------------------------------------------------------------
+    # Behaviour cases: nothing outside the repository is read or listed.
+    # ------------------------------------------------------------------
+    marker = "EXTERNAL-SCHEMA-MARKER"
+    external_schema = {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "$id": "https://example.invalid/external.json",
+        "title": marker,
+        "type": "object",
+    }
+    outside_root = tempfile.mkdtemp()
+    with open(os.path.join(outside_root, "external.json"), "w", encoding="utf-8") as handle:
+        json.dump(external_schema, handle)
+    with open(os.path.join(outside_root, "external-only.yml"), "w", encoding="utf-8") as handle:
+        handle.write("name: External only\ndescription: External.\nbody: []\n")
+
+    def repo_with_schemas():
+        """Build a repository whose schemas directory holds the real schemas."""
+        root = make_temp_repo()
+        for name in (
+            "github-issue-forms.json",
+            "github-vulnerability-report-form.json",
+            "github-issue-config.json",
+        ):
+            shutil.copy(
+                os.path.join(SCHEMA_SOURCE_DIR, name),
+                os.path.join(root, "schemas", name),
+            )
+        return root
+
+    def schema_mentions_marker(root):
+        """True when the schema the validator would use carries the marker."""
+        try:
+            schemas = load_schemas(root)
+        except SystemExit:
+            return False
+        return any(
+            marker in json.dumps(schema) for schema in schemas.values()
+        )
+
+    symlinks_available = True
+    symlink_reason = ""
+    try:
+        probe = tempfile.mkdtemp()
+        os.symlink(os.path.join(outside_root, "external.json"),
+                    os.path.join(probe, "probe.json"))
+        shutil.rmtree(probe, ignore_errors=True)
+    except (OSError, NotImplementedError, AttributeError) as exc:
+        symlinks_available = False
+        symlink_reason = f"{type(exc).__name__}: {exc}"
+
+    behaviour += 1
+    # Normal repository paths: everything resolves and is read.
+    plain_root = repo_with_schemas()
+    try:
+        schemas = load_schemas(plain_root)
+        if set(schemas) != {"issue_form", "vulnerability_form", "issue_config"}:
+            failures.append(
+                f"path containment: a normal repository did not yield the three schemas, got {sorted(schemas)}"
+            )
+    except SystemExit as exc:
+        failures.append(f"path containment: a normal repository was rejected: {exc}")
+    finally:
+        shutil.rmtree(plain_root, ignore_errors=True)
+
+    if symlinks_available:
+        behaviour += 1
+        # An external schemas directory symlink must never be read.
+        root = make_temp_repo()
+        shutil.rmtree(os.path.join(root, "schemas"))
+        os.symlink(outside_root, os.path.join(root, "schemas"))
+        try:
+            load_schemas(root)
+        except SystemExit:
+            pass
+        else:
+            failures.append("path containment: an external schemas directory symlink was read")
+        if schema_mentions_marker(root):
+            failures.append("path containment: the external schema content was read")
+        shutil.rmtree(root, ignore_errors=True)
+
+        behaviour += 1
+        # An external individual schema symlink must never be read.
+        root = repo_with_schemas()
+        os.remove(os.path.join(root, "schemas", "github-issue-forms.json"))
+        os.symlink(os.path.join(outside_root, "external.json"),
+                   os.path.join(root, "schemas", "github-issue-forms.json"))
+        try:
+            load_schemas(root)
+        except SystemExit:
+            pass
+        else:
+            failures.append("path containment: an external schema symlink was read")
+        if schema_mentions_marker(root):
+            failures.append("path containment: the external schema content was read")
+        shutil.rmtree(root, ignore_errors=True)
+
+        behaviour += 1
+        # A nested parent symlink must not smuggle an external directory in.
+        root = make_temp_repo()
+        shutil.rmtree(os.path.join(root, "schemas"))
+        os.makedirs(os.path.join(root, "internal"))
+        os.symlink(outside_root, os.path.join(root, "internal", "schemas"))
+        os.symlink(os.path.join(root, "internal", "schemas"), os.path.join(root, "schemas"))
+        try:
+            load_schemas(root)
+        except SystemExit:
+            pass
+        else:
+            failures.append("path containment: a nested parent symlink was read")
+        if schema_mentions_marker(root):
+            failures.append("path containment: the external schema content was read")
+        shutil.rmtree(root, ignore_errors=True)
+
+        behaviour += 1
+        # An internal schemas directory symlink is legitimate.
+        root = make_temp_repo()
+        internal = os.path.join(root, "real-schemas")
+        shutil.copytree(os.path.join(root, "schemas"), internal)
+        shutil.rmtree(os.path.join(root, "schemas"))
+        os.symlink(internal, os.path.join(root, "schemas"))
+        try:
+            schemas = load_schemas(root)
+            if set(schemas) != {"issue_form", "vulnerability_form", "issue_config"}:
+                failures.append("path containment: an internal schemas symlink did not resolve")
+        except SystemExit as exc:
+            failures.append(f"path containment: an internal schemas symlink was rejected: {exc}")
+        shutil.rmtree(root, ignore_errors=True)
+
+        behaviour += 1
+        # An internal file symlink is legitimate.
+        root = repo_with_schemas(os.path.join(make_temp_repo(), "schemas"))
+        os.remove(os.path.join(root, "schemas", "github-issue-forms.json"))
+        os.symlink(os.path.join(root, "schemas", "github-issue-config.json"),
+                   os.path.join(root, "schemas", "github-issue-forms.json"))
+        try:
+            load_schemas(root)
+        except SystemExit as exc:
+            failures.append(f"path containment: an internal file symlink was rejected: {exc}")
+        shutil.rmtree(root, ignore_errors=True)
+
+        behaviour += 1
+        # A symlink whose target does not exist is reported, not followed.
+        root = repo_with_schemas(os.path.join(make_temp_repo(), "schemas"))
+        os.remove(os.path.join(root, "schemas", "github-issue-forms.json"))
+        os.symlink(os.path.join(root, "schemas", "absent.json"),
+                   os.path.join(root, "schemas", "github-issue-forms.json"))
+        try:
+            load_schemas(root)
+        except SystemExit as exc:
+            if "broken link" not in str(exc):
+                failures.append(
+                    f"path containment: a missing symlink target was not reported as such: {exc}"
+                )
+        else:
+            failures.append("path containment: a symlink with a missing target was accepted")
+        shutil.rmtree(root, ignore_errors=True)
+
+        behaviour += 1
+        # An external issue template directory must never be listed.
+        root = make_temp_repo()
+        template_dir = os.path.join(root, ".github", "ISSUE_TEMPLATE")
+        shutil.rmtree(template_dir)
+        os.symlink(outside_root, template_dir)
+        errors, _warnings = run_checks(root)
+        if not any("ISSUE_TEMPLATE" in message for message in errors):
+            failures.append(
+                "path containment: an external issue template directory was not reported"
+            )
+        if any("external-only.yml" in message for message in errors):
+            failures.append(
+                "path containment: an external issue template file was enumerated"
+            )
+        shutil.rmtree(root, ignore_errors=True)
+    else:
+        print(f"  skipped 7 containment symlink case(s): symbolic links are not available here "
+              f"({symlink_reason})")
+
+    behaviour += 1
+    # The same decisions, reached without a real symbolic link, so they are
+    # covered on every platform.
+    original_realpath = os.path.realpath
+    original_islink = os.path.islink
+    simulated_root = make_temp_repo()
+    simulated_outside = os.path.join(outside_root, "external.json")
+    simulated_link = os.path.join(simulated_root, "schemas", "github-issue-forms.json")
+
+    def simulated_realpath(path, *args, **kwargs):
+        real = original_realpath(path, *args, **kwargs)
+        if os.path.abspath(real) == os.path.abspath(simulated_link):
+            return simulated_outside
+        return real
+
+    def simulated_islink(path):
+        if os.path.abspath(path) == os.path.abspath(simulated_link):
+            return True
+        return original_islink(path)
+
+    os.path.realpath = simulated_realpath
+    os.path.islink = simulated_islink
+    try:
+        try:
+            load_schemas(simulated_root)
+        except SystemExit:
+            rejected = True
+        else:
+            rejected = False
+    finally:
+        os.path.realpath = original_realpath
+        os.path.islink = original_islink
+    if not rejected:
+        failures.append(
+            "path containment: a simulated external schema symlink was not rejected"
+        )
+    shutil.rmtree(simulated_root, ignore_errors=True)
+    shutil.rmtree(outside_root, ignore_errors=True)
+
+    # ------------------------------------------------------------------
     # Behaviour cases: the schema refresh is transactional.
     # ------------------------------------------------------------------
     good_downloads = {
@@ -1113,7 +1331,9 @@ def run():
         target_dir = os.path.join(temp_root, "target")
         os.makedirs(target_dir, exist_ok=True)
         for name in artifacts:
-            with open(os.path.join(target_dir, name), "wb") as handle:
+            path = os.path.join(target_dir, name.replace("/", os.sep))
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, "wb") as handle:
                 handle.write(original)
         return target_dir
 
@@ -1166,7 +1386,7 @@ def run():
             artifacts = {f"f{i}.json": f'{{"v": {i}}}\n'.encode() for i in range(5)}
             target_dir = seed_target(temp_root, artifacts)
             staging = stage_for(temp_root, artifacts)
-            backup_dir = os.path.join(target_dir, update_schemas.BACKUP_DIR_NAME)
+            backup_root = os.path.join(target_dir, update_schemas.BACKUP_DIR_NAME)
 
             original_replace, failing_replace = inject_promotion_failure(promote_count + 1)
             original_copy2 = shutil.copy2
@@ -1200,9 +1420,10 @@ def run():
             # never deleted, because it is the only recoverable copy.
             survivors = []
             for name in artifacts:
-                backup = os.path.join(backup_dir, name)
-                if os.path.exists(backup):
-                    survivors.append((name, backup))
+                for dirpath, _dirnames, filenames in os.walk(backup_root):
+                    if name in filenames:
+                        survivors.append((name, os.path.join(dirpath, name)))
+                        break
             if not survivors:
                 failures.append(
                     "schema refresh: the recoverable copies were destroyed after a failed "
@@ -1282,6 +1503,220 @@ def run():
         if os.path.exists(os.path.join(target_dir, update_schemas.BACKUP_DIR_NAME)):
             failures.append(
                 "schema refresh: the backup directory survived a completely successful refresh"
+            )
+    finally:
+        shutil.rmtree(temp_root, ignore_errors=True)
+
+    # ------------------------------------------------------------------
+    # Behaviour cases: a preserved recovery copy survives a later update.
+    # ------------------------------------------------------------------
+    def transaction_dirs(target_dir):
+        root = os.path.join(target_dir, update_schemas.BACKUP_DIR_NAME)
+        if not os.path.isdir(root):
+            return []
+        return sorted(
+            os.path.join(root, name)
+            for name in os.listdir(root)
+            if name.startswith(update_schemas.TRANSACTION_PREFIX)
+        )
+
+    def failed_transaction(temp_root, artifacts, target_dir, original):
+        """Run a promotion whose rollback also fails, and return the backups."""
+        staging = stage_for(temp_root, artifacts)
+        original_replace, failing_replace = inject_promotion_failure(2)
+        original_copy2 = shutil.copy2
+
+        def failing_copy2(source, destination, *args, **kwargs):
+            if update_schemas.BACKUP_DIR_NAME in str(source):
+                raise OSError("injected restore failure")
+            return original_copy2(source, destination, *args, **kwargs)
+
+        os.replace = failing_replace
+        shutil.copy2 = failing_copy2
+        try:
+            update_schemas.promote(artifacts, staging, target_dir)
+        except Exception:
+            pass
+        finally:
+            os.replace = original_replace
+            shutil.copy2 = original_copy2
+        preserved = {}
+        for directory in transaction_dirs(target_dir):
+            for name in artifacts:
+                candidate = os.path.join(directory, name)
+                if os.path.exists(candidate):
+                    preserved[candidate] = open(candidate, "rb").read()
+        return preserved
+
+    behaviour += 1
+    # A failed rollback leaves a recovery copy, and a later transaction must not
+    # overwrite it.
+    temp_root = make_temp_repo()
+    try:
+        artifacts = {"f0.json": b'{"v": 0}\n', "f1.json": b'{"v": 1}\n'}
+        target_dir = seed_target(temp_root, artifacts, original=b"ORIGINAL-CONTENT\n")
+
+        first_backups = failed_transaction(temp_root, artifacts, target_dir, b"ORIGINAL-CONTENT\n")
+        if not first_backups:
+            failures.append("schema refresh: the recovery copy was not preserved")
+        first_dirs = transaction_dirs(target_dir)
+        if len(first_dirs) != 1:
+            failures.append(
+                f"schema refresh: expected one transaction directory, got {first_dirs}"
+            )
+
+        # A second failed transaction gets its own directory and leaves the
+        # earlier recovery copy alone.
+        second_backups = failed_transaction(temp_root, artifacts, target_dir, b"ORIGINAL-CONTENT\n")
+        second_dirs = transaction_dirs(target_dir)
+        if len(second_dirs) < 2:
+            failures.append(
+                f"schema refresh: two failed transactions left {len(second_dirs)} directories"
+            )
+        if len(second_dirs) <= len(first_dirs):
+            failures.append(
+                "schema refresh: the second transaction did not create its own directory"
+            )
+        for path, content in first_backups.items():
+            if not os.path.exists(path):
+                failures.append(
+                    f"schema refresh: the earlier recovery copy {path} was deleted"
+                )
+                continue
+            with open(path, "rb") as handle:
+                if handle.read() != content:
+                    failures.append(
+                        f"schema refresh: the earlier recovery copy {path} was overwritten"
+                    )
+        for path, content in second_backups.items():
+            with open(path, "rb") as handle:
+                if handle.read() != content:
+                    failures.append(
+                        f"schema refresh: the recovery copy {path} is not the original"
+                    )
+    finally:
+        shutil.rmtree(temp_root, ignore_errors=True)
+
+    behaviour += 1
+    # Two failed transactions keep two independent recovery copies.
+    temp_root = make_temp_repo()
+    try:
+        artifacts = {"f0.json": b'{"v": 0}\n', "f1.json": b'{"v": 1}\n'}
+        target_dir = seed_target(temp_root, artifacts, original=b"ORIGINAL-CONTENT\n")
+        first_backups = failed_transaction(
+            temp_root, artifacts, target_dir, b"ORIGINAL-CONTENT\n")
+        second_backups = failed_transaction(
+            temp_root, artifacts, target_dir, b"ORIGINAL-CONTENT\n")
+        directories = transaction_dirs(target_dir)
+        if len(directories) < 2:
+            failures.append(
+                f"schema refresh: two failed transactions left {len(directories)} directories"
+            )
+        for mapping in (first_backups, second_backups):
+            for path, content in mapping.items():
+                if not os.path.exists(path):
+                    failures.append(
+                        f"schema refresh: the recovery copy {path} was deleted"
+                    )
+                    continue
+                with open(path, "rb") as handle:
+                    if handle.read() != content:
+                        failures.append(
+                            f"schema refresh: the recovery copy {path} was overwritten"
+                        )
+    finally:
+        shutil.rmtree(temp_root, ignore_errors=True)
+
+    behaviour += 1
+    # A successful transaction after an earlier failed one leaves the earlier
+    # recovery copy alone.
+    temp_root = make_temp_repo()
+    try:
+        artifacts = {"f0.json": b'{"v": 0}\n', "f1.json": b'{"v": 1}\n'}
+        target_dir = seed_target(temp_root, artifacts, original=b"ORIGINAL-CONTENT\n")
+        failed_transaction(temp_root, artifacts, target_dir, b"ORIGINAL-CONTENT\n")
+
+        earlier = transaction_dirs(target_dir)
+        preserved = {}
+        for directory in earlier:
+            candidate = os.path.join(directory, "f0.json")
+            if os.path.exists(candidate):
+                preserved[candidate] = open(candidate, "rb").read()
+        if not preserved:
+            failures.append(
+                "schema refresh: the earlier failed transaction left no recovery copy"
+            )
+
+        second_artifacts = {"f0.json": b'{"v": 7}\n'}
+        second_staging = stage_for(temp_root, second_artifacts)
+        update_schemas.promote(second_artifacts, second_staging, target_dir)
+        for path, content in preserved.items():
+            if not os.path.exists(path):
+                failures.append(
+                    f"schema refresh: a successful transaction deleted the recovery copy {path}"
+                )
+                continue
+            with open(path, "rb") as handle:
+                if handle.read() != content:
+                    failures.append(
+                        f"schema refresh: a successful transaction overwrote the recovery copy {path}"
+                    )
+    finally:
+        shutil.rmtree(temp_root, ignore_errors=True)
+
+    behaviour += 1
+    # A concurrent refresh is refused while the lock is held.
+    temp_root = make_temp_repo()
+    try:
+        lock_path = update_schemas.acquire_update_lock(temp_root)
+        try:
+            update_schemas.acquire_update_lock(temp_root)
+        except update_schemas.UpdateError:
+            pass
+        else:
+            failures.append("schema refresh: a concurrent refresh was not refused")
+        finally:
+            update_schemas.release_update_lock(lock_path)
+        if os.path.exists(lock_path):
+            failures.append("schema refresh: the lock file was not released")
+        # The lock can be taken again once it has been released.
+        again = update_schemas.acquire_update_lock(temp_root)
+        update_schemas.release_update_lock(again)
+    finally:
+        shutil.rmtree(temp_root, ignore_errors=True)
+
+    behaviour += 1
+    # A successful promotion with the real nested artifact layout leaves no
+    # staging file, restore file, backup file, or empty transaction directory.
+    temp_root = make_temp_repo()
+    try:
+        artifacts = {
+            "github-issue-forms.json": b'{"v": 1}\n',
+            "third-party/LICENSE-Apache-2.0.txt": b"licence\n",
+            "third-party/NOTICE-SchemaStore.txt": b"notice\n",
+        }
+        target_dir = seed_target(temp_root, artifacts, original=b"ORIGINAL\n")
+        staging = stage_for(temp_root, artifacts)
+        update_schemas.promote(artifacts, staging, target_dir)
+
+        leftovers = []
+        for dirpath, dirnames, filenames in os.walk(target_dir):
+            for name in filenames:
+                if (update_schemas.BACKUP_DIR_NAME in dirpath
+                        or name.endswith(".naabtech-restore")
+                        or name.endswith(".tmp")):
+                    leftovers.append(os.path.join(dirpath, name))
+            for name in dirnames:
+                if name.startswith(update_schemas.TRANSACTION_PREFIX):
+                    leftovers.append(os.path.join(dirpath, name))
+        if leftovers:
+            failures.append(
+                f"schema refresh: a successful nested promotion left files behind: {leftovers}"
+            )
+        backup_root = os.path.join(target_dir, update_schemas.BACKUP_DIR_NAME)
+        if os.path.exists(backup_root):
+            failures.append(
+                "schema refresh: the backup root survived a completely successful promotion"
             )
     finally:
         shutil.rmtree(temp_root, ignore_errors=True)
