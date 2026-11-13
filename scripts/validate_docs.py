@@ -102,6 +102,9 @@ def resolve_repository_path(root, relative):
         if _broken_symlink_component(candidate):
             return PATH_BROKEN_LINK, None
         return PATH_MISSING, None
+    if not os.path.exists(resolved):
+        # The path exists as a symbolic link, but its target does not.
+        return PATH_BROKEN_LINK, None
     return PATH_OK, resolved
 
 

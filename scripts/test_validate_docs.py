@@ -1157,7 +1157,7 @@ def run():
 
         behaviour += 1
         # An internal file symlink is legitimate.
-        root = repo_with_schemas(os.path.join(make_temp_repo(), "schemas"))
+        root = repo_with_schemas()
         os.remove(os.path.join(root, "schemas", "github-issue-forms.json"))
         os.symlink(os.path.join(root, "schemas", "github-issue-config.json"),
                    os.path.join(root, "schemas", "github-issue-forms.json"))
@@ -1169,7 +1169,7 @@ def run():
 
         behaviour += 1
         # A symlink whose target does not exist is reported, not followed.
-        root = repo_with_schemas(os.path.join(make_temp_repo(), "schemas"))
+        root = repo_with_schemas()
         os.remove(os.path.join(root, "schemas", "github-issue-forms.json"))
         os.symlink(os.path.join(root, "schemas", "absent.json"),
                    os.path.join(root, "schemas", "github-issue-forms.json"))
@@ -1188,6 +1188,7 @@ def run():
         # An external issue template directory must never be listed.
         root = make_temp_repo()
         template_dir = os.path.join(root, ".github", "ISSUE_TEMPLATE")
+        os.makedirs(template_dir, exist_ok=True)
         shutil.rmtree(template_dir)
         os.symlink(outside_root, template_dir)
         errors, _warnings = run_checks(root)
