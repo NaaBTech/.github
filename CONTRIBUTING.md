@@ -64,7 +64,7 @@ Explain the problem before the solution. A feature request is strongest when it 
 
 ### Branch Naming
 
-Create a focused branch from the default branch. Use the following prefixes:
+Create a focused branch from the default branch. If you do not have write access to the repository, fork it first and branch from the fork's default branch. Use the following prefixes:
 
 | Prefix | Use for |
 | --- | --- |

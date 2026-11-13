@@ -1,5 +1,11 @@
 extends: default
 
+# Paths that are never linted. node_modules is installed by npm and is not
+# part of the repository; the .git directory holds git's own metadata.
+ignore: |
+  node_modules/
+  .git/
+
 rules:
   # Long lines are expected in issue form descriptions and Markdown tables.
   line-length:
