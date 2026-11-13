@@ -83,6 +83,14 @@ The schemas are refreshed manually. CI never downloads them, so a schema host ou
 python scripts/update_schemas.py
 ```
 
+### Every path is checked before it is used
+
+The updater treats the repository root as the trusted boundary. Before any file is read, written, listed, created, copied, replaced or deleted, the path is canonicalized and compared with the trusted root using `os.path.commonpath()`. The whole path is canonicalized, so a symbolic link in **any** parent component is resolved too, not only the final component.
+
+This covers the schemas directory, the update lock, the staging directory, the backup root, every transaction directory, every artifact target, every backup destination, and every restore destination and temporary restore file.
+
+A `schemas/` directory, a `schemas/third-party/` directory, a `.naabtech-backups/` directory, or an individual artifact target that is a symbolic link pointing outside the repository is therefore rejected **before** anything outside is read or written. A legitimate internal symbolic link, of a file or of a directory, still resolves and is handled consistently.
+
 The script:
 
 1. Takes the update lock, so two refreshes cannot run at the same time.

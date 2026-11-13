@@ -596,6 +596,7 @@ def run():
     positive = 0
     negative = 0
     behaviour = 0
+    skipped = 0
 
     # ------------------------------------------------------------------
     # Positive control cases: valid documents must produce no errors.
@@ -756,6 +757,7 @@ def run():
         if resolve_within(link_dir, "inside.md") is None:
             failures.append("path containment: a symlink pointing to an internal file was rejected")
     else:
+        skipped += 2
         print(f"  skipped 2 symlink case(s): symbolic links are not available here ({symlink_reason})")
 
     for directory in (link_dir, outside_dir):
@@ -925,6 +927,7 @@ def run():
         symlink_cases = ["external_md", "external_yml", "internal_md", "alias_md",
                           "broken_md", "linkdir", "required_symlink"]
     except (OSError, NotImplementedError, AttributeError) as exc:
+        skipped += 6
         print(f"  skipped 6 discovery symlink case(s): symbolic links are not available here "
               f"({type(exc).__name__}: {exc})")
 
@@ -1002,7 +1005,6 @@ def run():
     shutil.rmtree(discovery_root, ignore_errors=True)
     shutil.rmtree(outside_root, ignore_errors=True)
 
-    behaviour += 1
     # The content behind an external symlink must never be read by the
     # validator. A file whose content would break YAML parsing proves it.
     outside_root = tempfile.mkdtemp()
@@ -1012,6 +1014,7 @@ def run():
     try:
         os.symlink(os.path.join(outside_root, "poison.yml"),
                     os.path.join(discovery_root, "poison.yml"))
+        behaviour += 1
         _files, rejected = repo_files(discovery_root, (".yml",))
         rejected_names = {name for name, _reason in rejected}
         if "poison.yml" not in rejected_names:
@@ -1022,6 +1025,7 @@ def run():
         if any("POISON-MARKER" in message for message in errors):
             failures.append("file discovery: the content behind an external symlink was read")
     except (OSError, NotImplementedError, AttributeError):
+        skipped += 1
         print("  skipped 1 external-content case(s): symbolic links are not available here")
     shutil.rmtree(discovery_root, ignore_errors=True)
     shutil.rmtree(outside_root, ignore_errors=True)
@@ -1202,6 +1206,7 @@ def run():
             )
         shutil.rmtree(root, ignore_errors=True)
     else:
+        skipped += 7
         print(f"  skipped 7 containment symlink case(s): symbolic links are not available here "
               f"({symlink_reason})")
 
@@ -1362,7 +1367,7 @@ def run():
             original_replace, failing_replace = inject_promotion_failure(fail_at)
             os.replace = failing_replace
             try:
-                update_schemas.promote(artifacts, staging, target_dir)
+                update_schemas.promote(artifacts, staging, target_dir, temp_root)
             except OSError:
                 pass
             else:
@@ -1401,7 +1406,7 @@ def run():
             shutil.copy2 = failing_copy2
             raised = None
             try:
-                update_schemas.promote(artifacts, staging, target_dir)
+                update_schemas.promote(artifacts, staging, target_dir, temp_root)
             except Exception as exc:
                 raised = exc
             finally:
@@ -1471,7 +1476,7 @@ def run():
 
         os.remove = failing_remove
         try:
-            update_schemas.promote(artifacts, staging, target_dir)
+            update_schemas.promote(artifacts, staging, target_dir, temp_root)
         except Exception as exc:
             failures.append(f"schema refresh: a backup cleanup failure failed the promotion: {exc}")
         finally:
@@ -1491,7 +1496,7 @@ def run():
         artifacts = {f"f{i}.json": f'{{"v": {i}}}\n'.encode() for i in range(3)}
         target_dir = seed_target(temp_root, artifacts)
         staging = stage_for(temp_root, artifacts)
-        update_schemas.promote(artifacts, staging, target_dir)
+        update_schemas.promote(artifacts, staging, target_dir, temp_root)
         leftovers = []
         for dirpath, dirnames, filenames in os.walk(target_dir):
             for name in filenames:
@@ -1535,7 +1540,7 @@ def run():
         os.replace = failing_replace
         shutil.copy2 = failing_copy2
         try:
-            update_schemas.promote(artifacts, staging, target_dir)
+            update_schemas.promote(artifacts, staging, target_dir, temp_root)
         except Exception:
             pass
         finally:
@@ -1650,7 +1655,7 @@ def run():
 
         second_artifacts = {"f0.json": b'{"v": 7}\n'}
         second_staging = stage_for(temp_root, second_artifacts)
-        update_schemas.promote(second_artifacts, second_staging, target_dir)
+        update_schemas.promote(second_artifacts, second_staging, target_dir, temp_root)
         for path, content in preserved.items():
             if not os.path.exists(path):
                 failures.append(
@@ -1698,7 +1703,7 @@ def run():
         }
         target_dir = seed_target(temp_root, artifacts, original=b"ORIGINAL\n")
         staging = stage_for(temp_root, artifacts)
-        update_schemas.promote(artifacts, staging, target_dir)
+        update_schemas.promote(artifacts, staging, target_dir, temp_root)
 
         leftovers = []
         for dirpath, dirnames, filenames in os.walk(target_dir):
@@ -1722,10 +1727,298 @@ def run():
     finally:
         shutil.rmtree(temp_root, ignore_errors=True)
 
-    total = negative + positive + behaviour
+
+    # ------------------------------------------------------------------
+    # Behaviour cases: the schema updater stays inside the repository.
+    # ------------------------------------------------------------------
+    updater_symlinks = True
+    updater_symlink_reason = ""
+    try:
+        updater_probe = tempfile.mkdtemp()
+        os.symlink(os.path.join(updater_probe, "target"), os.path.join(updater_probe, "link"))
+        shutil.rmtree(updater_probe, ignore_errors=True)
+    except (OSError, NotImplementedError, AttributeError) as exc:
+        updater_symlinks = False
+        updater_symlink_reason = f"{type(exc).__name__}: {exc}"
+
+    if updater_symlinks:
+        sentinel_bytes = b"EXTERNAL-SENTINEL-CONTENT\n"
+
+        def sentinel_tree():
+            """A directory outside the repository holding a sentinel file."""
+            outside = tempfile.mkdtemp()
+            with open(os.path.join(outside, "sentinel.bin"), "wb") as handle:
+                handle.write(sentinel_bytes)
+            return outside
+
+        def outside_is_untouched(outside):
+            """The sentinel must be byte-for-byte unchanged."""
+            path = os.path.join(outside, "sentinel.bin")
+            if not os.path.exists(path):
+                return False, "sentinel.bin was removed"
+            with open(path, "rb") as handle:
+                if handle.read() != sentinel_bytes:
+                    return False, "sentinel.bin was overwritten"
+            return True, ""
+
+        def schema_repo():
+            """A repository-shaped tree with a real schemas directory."""
+            root = make_temp_repo()
+            for name in (
+                "github-issue-forms.json",
+                "github-vulnerability-report-form.json",
+                "github-issue-config.json",
+            ):
+                shutil.copy(
+                    os.path.join(SCHEMA_SOURCE_DIR, name),
+                    os.path.join(root, "schemas", name),
+                )
+            os.makedirs(os.path.join(root, "schemas", "third-party"), exist_ok=True)
+            return root
+
+        def updater_artifacts():
+            return {
+                "github-issue-forms.json": b'{"v": 1}\n',
+                "third-party/NOTICE-SchemaStore.txt": b"notice\n",
+            }
+
+        def no_external_content_copied(root):
+            """No file inside the repository may hold the sentinel content."""
+            stray = []
+            for dirpath, dirnames, filenames in os.walk(root):
+                for name in filenames:
+                    path = os.path.join(dirpath, name)
+                    try:
+                        with open(path, "rb") as handle:
+                            if handle.read() == sentinel_bytes:
+                                stray.append(path)
+                    except OSError:
+                        continue
+            return stray
+
+        # 1. A schemas directory that points outside the repository.
+        behaviour += 1
+        outside = sentinel_tree()
+        root = schema_repo()
+        try:
+            shutil.rmtree(os.path.join(root, "schemas"))
+            os.symlink(outside, os.path.join(root, "schemas"))
+            try:
+                update_schemas.canonical_schema_dir()
+            except update_schemas.UpdateError:
+                pass
+            else:
+                failures.append(
+                    "schema updater: a schemas directory pointing outside the repository was accepted"
+                )
+            ok, detail = outside_is_untouched(outside)
+            if not ok:
+                failures.append(f"schema updater: the external sentinel was touched: {detail}")
+            stray = no_external_content_copied(root)
+            if stray:
+                failures.append(
+                    f"schema updater: external content was copied into the repository: {stray}"
+                )
+        finally:
+            shutil.rmtree(root, ignore_errors=True)
+            shutil.rmtree(outside, ignore_errors=True)
+
+        # 2. A schemas/third-party directory that points outside the repository.
+        behaviour += 1
+        outside = sentinel_tree()
+        root = schema_repo()
+        try:
+            shutil.rmtree(os.path.join(root, "schemas", "third-party"))
+            os.symlink(outside, os.path.join(root, "schemas", "third-party"))
+            target_dir = os.path.join(root, "schemas")
+            staging = os.path.join(root, "staging")
+            os.makedirs(staging, exist_ok=True)
+            artifacts = updater_artifacts()
+            update_schemas.stage_artifacts(artifacts, staging)
+            try:
+                update_schemas.promote(artifacts, staging, target_dir, root)
+            except update_schemas.UpdateError:
+                pass
+            else:
+                failures.append(
+                    "schema updater: a third-party directory pointing outside the repository "
+                    "was accepted"
+                )
+            ok, detail = outside_is_untouched(outside)
+            if not ok:
+                failures.append(f"schema updater: the external sentinel was touched: {detail}")
+            stray = no_external_content_copied(root)
+            if stray:
+                failures.append(
+                    f"schema updater: external content was copied into the repository: {stray}"
+                )
+        finally:
+            shutil.rmtree(root, ignore_errors=True)
+            shutil.rmtree(outside, ignore_errors=True)
+
+        # 3. A backup directory that points outside the repository.
+        behaviour += 1
+        outside = sentinel_tree()
+        root = schema_repo()
+        try:
+            target_dir = os.path.join(root, "schemas")
+            staging = os.path.join(root, "staging")
+            os.makedirs(staging, exist_ok=True)
+            artifacts = updater_artifacts()
+            update_schemas.stage_artifacts(artifacts, staging)
+            os.symlink(outside, os.path.join(target_dir, update_schemas.BACKUP_DIR_NAME))
+            try:
+                update_schemas.promote(artifacts, staging, target_dir, root)
+            except update_schemas.UpdateError:
+                pass
+            else:
+                failures.append(
+                    "schema updater: a backup directory pointing outside the repository was accepted"
+                )
+            ok, detail = outside_is_untouched(outside)
+            if not ok:
+                failures.append(f"schema updater: the external sentinel was touched: {detail}")
+            stray = no_external_content_copied(root)
+            if stray:
+                failures.append(
+                    f"schema updater: external content was copied into the repository: {stray}"
+                )
+        finally:
+            shutil.rmtree(root, ignore_errors=True)
+            shutil.rmtree(outside, ignore_errors=True)
+
+        # 4. An artifact target that is itself a symbolic link pointing outside.
+        behaviour += 1
+        outside = sentinel_tree()
+        root = schema_repo()
+        try:
+            target_dir = os.path.join(root, "schemas")
+            staging = os.path.join(root, "staging")
+            os.makedirs(staging, exist_ok=True)
+            artifacts = updater_artifacts()
+            update_schemas.stage_artifacts(artifacts, staging)
+            os.remove(os.path.join(target_dir, "github-issue-forms.json"))
+            os.symlink(
+                os.path.join(outside, "sentinel.bin"),
+                os.path.join(target_dir, "github-issue-forms.json"),
+            )
+            try:
+                update_schemas.promote(artifacts, staging, target_dir, root)
+            except update_schemas.UpdateError:
+                pass
+            else:
+                failures.append(
+                    "schema updater: an artifact target pointing outside the repository was accepted"
+                )
+            ok, detail = outside_is_untouched(outside)
+            if not ok:
+                failures.append(f"schema updater: the external sentinel was touched: {detail}")
+            stray = no_external_content_copied(root)
+            if stray:
+                failures.append(
+                    f"schema updater: external content was copied into the repository: {stray}"
+                )
+        finally:
+            shutil.rmtree(root, ignore_errors=True)
+            shutil.rmtree(outside, ignore_errors=True)
+
+        # 5. An internal symbolic link is still handled consistently.
+        behaviour += 1
+        root = schema_repo()
+        try:
+            target_dir = os.path.join(root, "schemas")
+            staging = os.path.join(root, "staging")
+            os.makedirs(staging, exist_ok=True)
+            artifacts = updater_artifacts()
+            update_schemas.stage_artifacts(artifacts, staging)
+            internal = os.path.join(target_dir, "internal-copy.json")
+            shutil.copy(os.path.join(target_dir, "github-issue-config.json"), internal)
+            os.remove(os.path.join(target_dir, "github-issue-forms.json"))
+            os.symlink(internal, os.path.join(target_dir, "github-issue-forms.json"))
+            update_schemas.promote(artifacts, staging, target_dir, root)
+            with open(os.path.join(target_dir, "github-issue-forms.json"), "rb") as handle:
+                if handle.read() != b'{"v": 1}\n':
+                    failures.append(
+                        "schema updater: an internal symbolic link target was not replaced"
+                    )
+        except update_schemas.UpdateError as exc:
+            failures.append(f"schema updater: an internal symbolic link was rejected: {exc}")
+        finally:
+            shutil.rmtree(root, ignore_errors=True)
+    else:
+        skipped += 5
+        print(f"  skipped 5 updater containment case(s): symbolic links are not available here "
+              f"({updater_symlink_reason})")
+
+    # ------------------------------------------------------------------
+    # Behaviour case: a failed rollback is reported as such.
+    # ------------------------------------------------------------------
+    import contextlib
+    import io as _io
+
+    behaviour += 1
+    original_refresh = update_schemas.refresh
+
+    def failing_refresh():
+        raise update_schemas.RollbackError(
+            "promotion failed (injected) and 1 file(s) could not be restored: f0.json. "
+            "Recoverable copies are kept in /tmp/transaction-abc123"
+        )
+
+    update_schemas.refresh = failing_refresh
+    try:
+        buffer = _io.StringIO()
+        with contextlib.redirect_stderr(buffer):
+            exit_code = update_schemas.main()
+    finally:
+        update_schemas.refresh = original_refresh
+    stderr_text = buffer.getvalue()
+    if exit_code == 0:
+        failures.append("schema updater: an incomplete rollback did not fail the command")
+    if "INCOMPLETE" not in stderr_text:
+        failures.append(
+            f"schema updater: an incomplete rollback was not reported as such: {stderr_text!r}"
+        )
+    if "transaction-abc123" not in stderr_text:
+        failures.append(
+            f"schema updater: the recovery directory was not reported: {stderr_text!r}"
+        )
+    if "f0.json" not in stderr_text:
+        failures.append(
+            f"schema updater: the affected artifact was not reported: {stderr_text!r}"
+        )
+    if "nothing was changed" in stderr_text:
+        failures.append(
+            f"schema updater: an incomplete rollback claimed that nothing changed: {stderr_text!r}"
+        )
+
+    # The generic failure handler must not claim anything about the state of
+    # the filesystem either.
+    def failing_refresh_generic():
+        raise update_schemas.UpdateError("injected generic failure")
+
+    update_schemas.refresh = failing_refresh_generic
+    try:
+        buffer = _io.StringIO()
+        with contextlib.redirect_stderr(buffer):
+            exit_code = update_schemas.main()
+    finally:
+        update_schemas.refresh = original_refresh
+    stderr_text = buffer.getvalue()
+    if exit_code == 0:
+        failures.append("schema updater: a generic failure did not fail the command")
+    if "nothing was changed" in stderr_text:
+        failures.append(
+            f"schema updater: the generic handler claimed that nothing changed: {stderr_text!r}"
+        )
+
+    checked = negative + positive + behaviour
+    applicable = checked + skipped
+    total = checked
     print(
         f"validate_docs tests: {negative} negative case(s), {positive} positive control(s), "
-        f"and {behaviour} behaviour case(s) checked ({total} total)"
+        f"and {behaviour} behaviour case(s) checked ({checked} checked, {skipped} skipped, "
+        f"{applicable} applicable)"
     )
     if failures:
         for failure in failures:

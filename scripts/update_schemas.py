@@ -118,6 +118,71 @@ TRANSACTION_PREFIX = "transaction-"
 LOCK_FILE_NAME = ".naabtech-update.lock"
 
 
+# --------------------------------------------------------------------------
+# Path containment
+# --------------------------------------------------------------------------
+
+def _is_within(root, path):
+    """True when path is the root itself or sits underneath it."""
+    try:
+        return os.path.commonpath([root, path]) == root
+    except ValueError:
+        # Different drives on Windows, or a mix of absolute and relative paths.
+        return False
+
+
+def contained_path(root, relative, description, allow_missing=False):
+    """Return the path for a location under a trusted root, or raise UpdateError.
+
+    The whole candidate path is canonicalized, so a symbolic link in any
+    parent component is resolved as well. A path whose canonical destination
+    lies outside the trusted root is rejected *before* it is read, created,
+    written, overwritten or deleted.
+
+    The returned path is the lexical location under the canonical root, so an
+    operation never writes through a symbolic link.
+    """
+    canonical_root = os.path.realpath(root)
+    candidate = os.path.join(canonical_root, relative.replace("/", os.sep))
+    try:
+        resolved = os.path.realpath(candidate)
+    except (OSError, ValueError):
+        raise UpdateError(f"{description} cannot be resolved: {candidate}")
+    if not _is_within(canonical_root, resolved):
+        raise UpdateError(
+            f"{description} is outside {canonical_root}: {candidate} resolves to {resolved}"
+        )
+    if not os.path.lexists(candidate):
+        if not allow_missing:
+            raise UpdateError(f"{description} does not exist: {candidate}")
+        return candidate
+    if not os.path.exists(resolved):
+        raise UpdateError(f"{description} is a broken symbolic link: {candidate}")
+    return candidate
+
+
+def canonical_repository_root():
+    """The canonical repository root that every path is checked against."""
+    return os.path.realpath(ROOT)
+
+
+def canonical_schema_dir():
+    """The canonical schema directory, which must be inside the repository.
+
+    A schemas directory that is a symbolic link to an internal directory is
+    accepted, because it stays inside the repository. One that points outside
+    is rejected before anything is read or written.
+    """
+    canonical_root = canonical_repository_root()
+    try:
+        return contained_path(canonical_root, "schemas", "the schemas directory")
+    except UpdateError as exc:
+        raise UpdateError(
+            "the schemas directory is not usable: it must be a directory inside the "
+            f"repository {canonical_root}. {exc}"
+        )
+
+
 def download(url):
     request = urllib.request.Request(url, headers={"User-Agent": "naabtech-docs-audit"})
     with urllib.request.urlopen(request, timeout=60) as response:
@@ -304,9 +369,16 @@ def build_artifacts(downloads):
 
 
 def stage_artifacts(artifacts, staging_dir):
-    """Write the artifact set into a staging directory."""
+    """Write the artifact set into a staging directory.
+
+    Every artifact path is checked against the staging directory, so a
+    symbolic link cannot redirect a write outside it.
+    """
+    staging_root = os.path.realpath(staging_dir)
     for name, payload in artifacts.items():
-        path = os.path.join(staging_dir, name.replace("/", os.sep))
+        path = contained_path(
+            staging_root, name, f"the staged artifact {name}", allow_missing=True
+        )
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "wb") as handle:
             handle.write(payload)
@@ -316,8 +388,11 @@ def stage_artifacts(artifacts, staging_dir):
 
 def verify_staged(artifacts, staging_dir):
     """Verify that the staged files match what was built, before promotion."""
+    staging_root = os.path.realpath(staging_dir)
     for name, payload in artifacts.items():
-        path = os.path.join(staging_dir, name.replace("/", os.sep))
+        path = contained_path(
+            staging_root, name, f"the staged artifact {name}", allow_missing=True
+        )
         if not os.path.exists(path):
             raise UpdateError(f"staged file is missing: {name}")
         with open(path, "rb") as handle:
@@ -331,14 +406,22 @@ def verify_staged(artifacts, staging_dir):
                 raise UpdateError(f"staged file is not valid JSON: {name}: {exc}")
 
 
-def cleanup_transaction_dir(transaction_dir):
+def cleanup_transaction_dir(transaction_dir, backup_root):
     """Remove a transaction directory and the empty directories inside it.
 
     Directories are removed from the bottom up, so a nested artifact path such
     as ``third-party/NOTICE-SchemaStore.txt`` leaves no empty child directory
     behind. A directory that still holds a backup is never removed, and every
     path that could not be removed is returned.
+
+    The transaction directory is checked against the backup root first, so a
+    backup root that is a symbolic link pointing outside the repository cannot
+    redirect the removal.
     """
+    backup_root = os.path.realpath(backup_root)
+    transaction_dir = contained_path(
+        backup_root, os.path.basename(transaction_dir), "the transaction directory"
+    )
     leftovers = []
     for dirpath, _dirnames, _filenames in os.walk(transaction_dir, topdown=False):
         try:
@@ -354,7 +437,9 @@ def acquire_update_lock(target_dir):
     Returns the path of the lock file. Raises UpdateError when another
     refresh already holds it.
     """
-    path = os.path.join(target_dir, LOCK_FILE_NAME)
+    path = contained_path(
+        os.path.realpath(target_dir), LOCK_FILE_NAME, "the update lock", allow_missing=True
+    )
     try:
         handle = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
     except FileExistsError:
@@ -375,8 +460,13 @@ def release_update_lock(path):
         sys.stderr.write(f"update_schemas: could not remove the lock {path}: {exc}\n")
 
 
-def promote(artifacts, staging_dir, target_dir):
+def promote(artifacts, staging_dir, target_dir, trusted_root=None):
     """Move the staged files into place, rolling back on failure.
+
+    ``trusted_root`` is the directory that the schema directory and the
+    staging directory must sit inside. It defaults to the repository root. The
+    parameter exists so that the behaviour can be exercised against a
+    temporary directory without weakening the containment check.
 
     Each file is replaced individually, so a failure part way through can leave
     a mixture. The previous content of every file is kept in a backup
@@ -392,7 +482,22 @@ def promote(artifacts, staging_dir, target_dir):
     power loss between two replacements can still leave a mixture, and the
     backup directory is what makes that recoverable by hand.
     """
-    backup_root = os.path.join(target_dir, BACKUP_DIR_NAME)
+    repository_root = os.path.realpath(trusted_root) if trusted_root else canonical_repository_root()
+    target_root = os.path.realpath(target_dir)
+    if not _is_within(repository_root, target_root):
+        raise UpdateError(
+            f"the schema directory is outside the repository {repository_root}: {target_dir}"
+        )
+    staging_root = os.path.realpath(staging_dir)
+    if not _is_within(repository_root, staging_root):
+        raise UpdateError(
+            f"the staging directory is outside the repository {repository_root}: {staging_dir}"
+        )
+    # The backup root is checked before it is created, so a symbolic link
+    # pointing outside the repository cannot redirect the backups.
+    backup_root = contained_path(
+        target_root, BACKUP_DIR_NAME, "the backup directory", allow_missing=True
+    )
     os.makedirs(backup_root, exist_ok=True)
     # A unique directory per transaction. A later transaction can therefore
     # never overwrite the recovery copy of an earlier one.
@@ -405,12 +510,21 @@ def promote(artifacts, staging_dir, target_dir):
 
     try:
         for name in artifacts:
-            source = os.path.join(staging_dir, name.replace("/", os.sep))
-            target = os.path.join(target_dir, name.replace("/", os.sep))
+            source = contained_path(
+                staging_root, name, f"the staged artifact {name}", allow_missing=True
+            )
+            # The target is checked before it is read, backed up or replaced,
+            # so an artifact that is a symbolic link pointing outside the
+            # repository is rejected rather than followed.
+            target = contained_path(
+                target_root, name, f"the target for {name}", allow_missing=True
+            )
             os.makedirs(os.path.dirname(target), exist_ok=True)
             if os.path.exists(target):
                 # The backup keeps the nested artifact layout.
-                backup = os.path.join(transaction_dir, name.replace("/", os.sep))
+                backup = contained_path(
+                    transaction_dir, name, f"the backup for {name}", allow_missing=True
+                )
                 os.makedirs(os.path.dirname(backup), exist_ok=True)
                 shutil.copy2(target, backup)
                 backups[name] = backup
@@ -427,7 +541,12 @@ def promote(artifacts, staging_dir, target_dir):
                 if backup is not None and os.path.exists(backup):
                     # Copy to a temporary name and move it into place, so the
                     # destination is never left partially overwritten.
-                    restore = target + ".naabtech-restore"
+                    restore = contained_path(
+                        target_root,
+                        name.replace("/", os.sep) + ".naabtech-restore",
+                        f"the restore file for {name}",
+                        allow_missing=True,
+                    )
                     shutil.copy2(backup, restore)
                     os.replace(restore, target)
                     restored.add(name)
@@ -470,7 +589,7 @@ def promote(artifacts, staging_dir, target_dir):
             # directories inside it. A recovery directory from an earlier
             # transaction, or one that still holds an un-restored backup, is
             # never removed.
-            for leftover in cleanup_transaction_dir(transaction_dir):
+            for leftover in cleanup_transaction_dir(transaction_dir, backup_root):
                 sys.stderr.write(
                     f"update_schemas: could not remove {leftover}\n"
                 )
@@ -484,7 +603,11 @@ def promote(artifacts, staging_dir, target_dir):
 
 def refresh():
     """Run a complete refresh. Returns the artifact set that was promoted."""
-    lock_path = acquire_update_lock(SCHEMA_DIR)
+    # The canonical schema directory is resolved first. If it is a symbolic
+    # link pointing outside the repository, the refresh stops before anything
+    # is read, created or written.
+    schema_dir = canonical_schema_dir()
+    lock_path = acquire_update_lock(schema_dir)
     staging_dir = None
     try:
         downloads = {}
@@ -497,10 +620,10 @@ def refresh():
 
         artifacts = build_artifacts(downloads)
 
-        staging_dir = tempfile.mkdtemp(prefix=".staging-", dir=SCHEMA_DIR)
+        staging_dir = tempfile.mkdtemp(prefix=".staging-", dir=schema_dir)
         stage_artifacts(artifacts, staging_dir)
         verify_staged(artifacts, staging_dir)
-        promote(artifacts, staging_dir, SCHEMA_DIR)
+        promote(artifacts, staging_dir, schema_dir)
     finally:
         if staging_dir:
             shutil.rmtree(staging_dir, ignore_errors=True)
@@ -512,14 +635,39 @@ def refresh():
 
 
 def main():
-    os.makedirs(SCHEMA_DIR, exist_ok=True)
+    try:
+        os.makedirs(SCHEMA_DIR, exist_ok=True)
+    except OSError as exc:
+        sys.stderr.write(
+            f"schema refresh failed: the schemas directory could not be created: {exc}\n"
+        )
+        return 1
     try:
         refresh()
+    except RollbackError as exc:
+        # The rollback did not fully succeed, so the schema directory may hold
+        # partially updated files. Saying otherwise would be wrong.
+        sys.stderr.write(
+            "schema refresh failed and the rollback was INCOMPLETE.\n"
+            f"  {exc}\n"
+            "  The schema directory may contain partially updated files. Restore the\n"
+            "  affected files from the recovery directory above before running the\n"
+            "  refresh again.\n"
+        )
+        return 1
     except UpdateError as exc:
-        sys.stderr.write(f"schema refresh failed, nothing was changed: {exc}\n")
+        sys.stderr.write(
+            f"schema refresh failed: {exc}\n"
+            "  The refresh was stopped. The schema directory is only guaranteed to be\n"
+            "  unchanged when the failure happened before the promotion step.\n"
+        )
         return 1
     except Exception as exc:  # noqa: BLE001
-        sys.stderr.write(f"schema refresh failed, nothing was changed: {type(exc).__name__}: {exc}\n")
+        sys.stderr.write(
+            f"schema refresh failed with an unexpected error: {type(exc).__name__}: {exc}\n"
+            "  The state of the schema directory cannot be asserted. Check it before\n"
+            "  running the refresh again.\n"
+        )
         return 1
     print("\nSchemas updated. Review schemas/README.md and re-run the validation tests.")
     return 0
