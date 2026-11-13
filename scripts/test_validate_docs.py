@@ -1660,6 +1660,245 @@ def run():
     finally:
         shutil.rmtree(temp_root, ignore_errors=True)
 
+    # A rollback failure for an artifact whose original backup has
+    # disappeared.
+    #
+    # The artifact existed before the promotion and its backup was created,
+    # but the backup is gone by the time the rollback starts. The original
+    # content cannot be restored, and removing the promoted file would not
+    # restore it either, so the promoted file must be left in place.
+    behaviour += 1
+    import contextlib
+    import io as _io
+
+    temp_root = make_temp_repo()
+    try:
+        artifacts = {
+            "missing-backup.json": b'{"v": 0}\n',
+            "kept-backup.json": b'{"v": 1}\n',
+            "failing.json": b'{"v": 2}\n',
+        }
+        target_dir = os.path.join(temp_root, "target")
+        os.makedirs(target_dir, exist_ok=True)
+        for name in artifacts:
+            with open(os.path.join(target_dir, name), "wb") as handle:
+                handle.write(b'{"original": true}\n')
+        staging = stage_for(temp_root, artifacts)
+        backup_root = os.path.join(target_dir, update_schemas.BACKUP_DIR_NAME)
+
+        original_replace = os.replace
+        original_copy2 = shutil.copy2
+        state = {"promotions": 0, "backup_existed": False, "backup_bytes": b""}
+        recorded_backups = {}
+
+        def patched_copy2(source, destination, *args, **kwargs):
+            source_text = str(source)
+            destination_text = str(destination)
+            if update_schemas.BACKUP_DIR_NAME in source_text:
+                # A restore: the original copy cannot be put back in place.
+                raise OSError("injected restore failure")
+            if update_schemas.BACKUP_DIR_NAME in destination_text:
+                # A backup: the original content is being copied aside.
+                recorded_backups[os.path.basename(destination_text)] = destination_text
+            return original_copy2(source, destination, *args, **kwargs)
+
+        def patched_replace(source, destination, *args, **kwargs):
+            state["promotions"] += 1
+            if state["promotions"] == 3:
+                # The third promotion fails, after the first two succeeded.
+                raise OSError("injected promotion failure")
+            result = original_replace(source, destination, *args, **kwargs)
+            if state["promotions"] == 1:
+                # The first artifact has been promoted and its backup has
+                # been created. The backup then disappears, before the
+                # rollback begins.
+                backup_path = recorded_backups.get("missing-backup.json")
+                if backup_path and os.path.exists(backup_path):
+                    with open(backup_path, "rb") as handle:
+                        state["backup_bytes"] = handle.read()
+                    state["backup_existed"] = True
+                    os.remove(backup_path)
+            return result
+
+        os.replace = patched_replace
+        shutil.copy2 = patched_copy2
+        raised = None
+        stderr_buffer = _io.StringIO()
+        try:
+            with contextlib.redirect_stderr(stderr_buffer):
+                update_schemas.promote(artifacts, staging, target_dir, temp_root)
+        except Exception as exc:
+            raised = exc
+        finally:
+            os.replace = original_replace
+            shutil.copy2 = original_copy2
+
+        stderr_text = stderr_buffer.getvalue()
+        missing_target = os.path.join(target_dir, "missing-backup.json")
+
+        # The test has to prove that the backup existed before it vanished.
+        if not state["backup_existed"]:
+            failures.append(
+                "schema refresh: the backup of the missing-backup artifact did not exist "
+                "before it disappeared"
+            )
+        if state["backup_bytes"] != b'{"original": true}\n':
+            failures.append(
+                "schema refresh: the backup that disappeared was not the original file"
+            )
+
+        if not isinstance(raised, update_schemas.RollbackError):
+            failures.append(
+                "schema refresh: a rollback with a missing original backup did not raise "
+                f"RollbackError, got {raised!r}"
+            )
+        else:
+            message = str(raised)
+            recoverable_sentence = ""
+            missing_sentence = ""
+            new_sentence = ""
+            for sentence in message.split(". "):
+                if "the original copies are recoverable" in sentence:
+                    recoverable_sentence = sentence
+                elif "the original backup of these files is missing" in sentence:
+                    missing_sentence = sentence
+                elif "did not exist before the update" in sentence:
+                    new_sentence = sentence
+            # The artifact is classified as missing, not as recoverable and
+            # not as a newly created file.
+            if "missing-backup.json" not in missing_sentence:
+                failures.append(
+                    "schema refresh: the artifact whose original backup disappeared was not "
+                    f"reported as missing: {message!r}"
+                )
+            if "missing-backup.json" in recoverable_sentence:
+                failures.append(
+                    "schema refresh: the artifact whose original backup disappeared was "
+                    f"reported as recoverable: {message!r}"
+                )
+            if "missing-backup.json" in new_sentence:
+                failures.append(
+                    "schema refresh: the artifact whose original backup disappeared was "
+                    f"reported as a newly created file: {message!r}"
+                )
+            # The original content must not be claimed to be recoverable.
+            if "cannot be restored" not in missing_sentence:
+                failures.append(
+                    "schema refresh: the report does not say that the original content "
+                    f"cannot be restored: {message!r}"
+                )
+            # No recovery path may be reported as "None".
+            if "None" in message or "None" in stderr_text:
+                failures.append(
+                    "schema refresh: the rollback report named a recovery path of None: "
+                    f"{message!r} / {stderr_text!r}"
+                )
+            # The promoted file is left in place, because deleting it would
+            # not restore the original.
+            if not os.path.exists(missing_target):
+                failures.append(
+                    "schema refresh: the promoted file was deleted although its original "
+                    "backup was missing"
+                )
+            else:
+                with open(missing_target, "rb") as handle:
+                    if handle.read() != b'{"v": 0}\n':
+                        failures.append(
+                            "schema refresh: the promoted file was changed although its "
+                            "original backup was missing"
+                        )
+            # The exact target path is reported.
+            if f"missing-backup.json at {missing_target}" not in message:
+                failures.append(
+                    "schema refresh: the exact target path of the artifact whose original "
+                    f"backup disappeared was not reported: {message!r}"
+                )
+            # The report says that the original backup is missing.
+            if "the original backup of missing-backup.json is missing" not in stderr_text:
+                failures.append(
+                    "schema refresh: the report did not say that the original backup is "
+                    f"missing: {stderr_text!r}"
+                )
+            if "cannot be restored" not in stderr_text:
+                failures.append(
+                    "schema refresh: the report did not say that the original content "
+                    f"cannot be restored: {stderr_text!r}"
+                )
+            # The other original backup survives, unchanged, and is reported.
+            surviving = []
+            for dirpath, _dirnames, filenames in os.walk(backup_root):
+                for name in filenames:
+                    if name == "kept-backup.json":
+                        surviving.append(os.path.join(dirpath, name))
+            if not surviving:
+                failures.append(
+                    "schema refresh: the original backup of the other artifact was destroyed "
+                    "after a failed rollback"
+                )
+            else:
+                backup_path = surviving[0]
+                with open(backup_path, "rb") as handle:
+                    if handle.read() != b'{"original": true}\n':
+                        failures.append(
+                            "schema refresh: the surviving backup is not the original file"
+                        )
+                if backup_path not in message:
+                    failures.append(
+                        "schema refresh: the exact path of the recoverable backup was not "
+                        f"reported: {message!r}"
+                    )
+            # The transaction directory must not be cleaned up while the
+            # rollback is incomplete.
+            transaction_dirs = [
+                os.path.join(dirpath, name)
+                for dirpath, dirnames, _files in os.walk(backup_root)
+                for name in dirnames
+            ]
+            if not transaction_dirs:
+                failures.append(
+                    "schema refresh: the transaction recovery directory was cleaned up "
+                    "although the rollback was incomplete"
+                )
+
+            # The command line has to describe the missing backup as well.
+            original_refresh = update_schemas.refresh
+
+            def failing_refresh():
+                raise raised
+
+            cli_buffer = _io.StringIO()
+            try:
+                update_schemas.refresh = failing_refresh
+                with contextlib.redirect_stderr(cli_buffer):
+                    exit_code = update_schemas.main()
+            finally:
+                update_schemas.refresh = original_refresh
+            cli_text = cli_buffer.getvalue()
+            if exit_code == 0:
+                failures.append(
+                    "schema refresh: an incomplete rollback did not fail the command"
+                )
+            if "INCOMPLETE" not in cli_text:
+                failures.append(
+                    f"schema refresh: an incomplete rollback was not reported as such: {cli_text!r}"
+                )
+            if "nothing was changed" in cli_text:
+                failures.append(
+                    f"schema refresh: an incomplete rollback claimed that nothing changed: {cli_text!r}"
+                )
+            if "original backup is missing" not in cli_text:
+                failures.append(
+                    "schema refresh: the command line does not describe the missing original "
+                    f"backup: {cli_text!r}"
+                )
+            if "cannot be restored" not in cli_text:
+                failures.append(
+                    "schema refresh: the command line does not say that the original content "
+                    f"cannot be restored: {cli_text!r}"
+                )
+    finally:
+        shutil.rmtree(temp_root, ignore_errors=True)
+
     # A failure while removing the backups after a successful promotion is
     # reported but does not fail the promotion.
     behaviour += 1

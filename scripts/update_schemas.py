@@ -505,9 +505,9 @@ def rollback_summary(promotion_error, failures, transaction_dir):
         )
     if missing:
         details.append(
-            "the original copy of these files is no longer present, so there is no backup "
-            "to keep; the files the update created could not be removed and are left in "
-            "place, where they have to be inspected by hand: "
+            "the original backup of these files is missing, so the original content cannot "
+            "be restored from the transaction; the promoted files are left in place, where "
+            "they have to be inspected by hand: "
             + ", ".join(f"{name} at {path}" for name, path in missing)
         )
     summary = (
@@ -541,6 +541,12 @@ def promote(artifacts, staging_dir, target_dir, trusted_root=None):
     and therefore no backup. If that file cannot be removed again during the
     rollback, it is reported as a residual file that is left in place, and it
     is never described as a recoverable copy.
+
+    An artifact that did exist before the promotion, but whose backup is no
+    longer on disk, is a third case. The original content cannot be restored,
+    and removing the promoted file would not restore it either, so the
+    promoted file is left in place. The rollback is recorded as incomplete,
+    and the report says that the original backup is missing.
 
     This is an exception rollback, not a filesystem transaction. A crash or a
     power loss between two replacements can still leave a mixture, and the
@@ -610,6 +616,20 @@ def promote(artifacts, staging_dir, target_dir, trusted_root=None):
             # original copy, and therefore no backup to restore from.
             has_original = backup is not None
             recoverable = has_original and os.path.exists(backup)
+            if has_original and not recoverable:
+                # The artifact existed before the promotion, but its backup is
+                # no longer on disk. The original content cannot be restored,
+                # and removing the promoted file would not restore it either.
+                # The file is therefore left in place, to be inspected by
+                # hand, and the rollback is recorded as incomplete.
+                failures.append(("missing", name, target, None))
+                sys.stderr.write(
+                    f"update_schemas: the original backup of {name} is missing, so the "
+                    "original content cannot be restored\n"
+                    f"update_schemas: the promoted file is left at {target} and has to be "
+                    "inspected by hand\n"
+                )
+                continue
             try:
                 if recoverable:
                     # Copy to a temporary name and move it into place, so the
@@ -634,17 +654,6 @@ def promote(artifacts, staging_dir, target_dir, trusted_root=None):
                     sys.stderr.write(
                         f"update_schemas: could not restore {name}: {rollback_error}\n"
                         f"update_schemas: the recoverable copy is kept at {backup}\n"
-                    )
-                elif has_original:
-                    # The original copy is recorded but no longer on disk, so
-                    # there is nothing to restore from and nothing to keep.
-                    failures.append(("missing", name, target, rollback_error))
-                    sys.stderr.write(
-                        f"update_schemas: could not restore {name}: {rollback_error}\n"
-                        f"update_schemas: the original copy of {name} is no longer present at "
-                        f"{backup}, so there is no backup to keep\n"
-                        f"update_schemas: the file the update created is left at {target} "
-                        "and has to be inspected by hand\n"
                     )
                 else:
                     # The artifact did not exist before the promotion, so
@@ -756,6 +765,8 @@ def main():
             "  had an original copy can be restored from the recovery directory above.\n"
             "  The files that the update created could not be removed; they are named in\n"
             "  the message above, and they have to be inspected and removed by hand.\n"
+            "  Where an original backup is missing, the original content cannot be restored,\n"
+            "  and the promoted file is left in place for inspection.\n"
             "  Do not run the refresh again before the schema directory has been checked.\n"
         )
         return 1
