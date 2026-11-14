@@ -43,7 +43,7 @@ That attribution is reproduced unchanged. No copyright ownership is asserted ove
 
 `PROVENANCE.json` records the upstream URL, the path inside the SchemaStore repository, the SHA-256 of the upstream download, the SHA-256 of the vendored file, the upstream license, the modification notice, and whether each file was patched or derived. The third-party files are recorded in the same way under `third_party`.
 
-**This covers the vendored schemas only.** It says nothing about the license of the rest of this repository, which is a separate and unresolved owner decision — see the License section of the [repository README](../README.md).
+**This covers the vendored schemas only.** The rest of this repository is licensed under Apache-2.0 as well — see the License section of the [repository README](../README.md).
 
 ### A note on interpretation
 

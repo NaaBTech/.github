@@ -51,6 +51,9 @@ jobs:
       - name: Check YAML syntax and style
         run: yamllint --strict --config-file .yamllint.yml .
 
+      - name: Check spelling
+        run: codespell --check-hidden
+
       - name: Check the validator's own tests
         run: python scripts/test_validate_docs.py
 

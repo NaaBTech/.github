@@ -23,13 +23,13 @@ A committed file is the durable choice — it travels with the repository and is
 
 ## 1. Basic Repository Setup
 
-- [ ] **Name** — chosen to match the project, consistently across the repository, the README, and any package metadata.
+- [ ] **Name** — chosen to match the project, consistently across the repository, the README, and any package metadata. A product published by the organization carries the short brand name as its prefix, so it is named `NaaB <Product>`.
 - [ ] **Description** — one sentence describing what the project is. No claims about scale, customers, or certification.
 - [ ] **Visibility** — decided deliberately. Public for work that is meant to be open; private for internal or client work. A repository that has been public keeps its history publicly reachable.
 - [ ] **README** — what the project is, how to install it, how to use it, and how to get help. A repository without a README has no entry point.
 - [ ] **Default branch** — `main`, matching the rest of the organization.
 - [ ] **Project documentation** — anything longer than the README lives in `docs/` or equivalent, with the README linking to it.
-- [ ] **LICENSE** — every project needs its own license, chosen for that project. The organization deliberately has **no** default license file: GitHub does not use the `.github` repository as the source of a default project license, so a project without one is unlicensed until this is added.
+- [ ] **LICENSE** — every project needs its own license, chosen for that project. The organization provides **no** default license for projects: GitHub does not use the `.github` repository as the source of a default project license, so a project without one is unlicensed until this is added. The license on this repository covers its own contents only.
 - [ ] **Topics** — set on the repository so it is discoverable.
 
 ---
