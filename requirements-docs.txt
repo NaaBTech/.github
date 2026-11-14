@@ -4,6 +4,10 @@
 # jsonschema is used to validate the organization's issue forms and
 # vulnerability report form against the JSON Schemas vendored in schemas/.
 # See schemas/README.md for how those schemas are refreshed.
+# codespell catches spelling mistakes in the documentation and in the
+# scripts. The configuration, including the paths that are excluded
+# because they are upstream text, is in .codespellrc.
+codespell==2.4.3
 PyYAML==6.0.3
 jsonschema==4.26.0
 yamllint==1.38.0

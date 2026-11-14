@@ -87,7 +87,7 @@ Documentation for a specific project lives with that project. If a repository's 
 
 ## Business and Service Inquiries
 
-Questions about NaaB Tech's cybersecurity, software engineering, networking, and infrastructure work, and about working with the company, can be sent to **[info@naabtech.ir](mailto:info@naabtech.ir)** or through the [official website](https://naabtech.ir). Providing details about your situation makes the response more useful.
+Questions about NaaB Tech's cybersecurity, software, and IT work, and about working with the company, can be sent to **[info@naabtech.ir](mailto:info@naabtech.ir)** or through the [official website](https://naabtech.ir). Providing details about your situation makes the response more useful.
 
 NaaB Tech's officially published channels are listed in the [organization repository](https://github.com/NaaBTech/.github/blob/main/README.md#officially-published-channels). A channel appearing there means it is published by the company — it does not guarantee a response time or that the account is actively monitored.
 

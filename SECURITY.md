@@ -1,6 +1,6 @@
 # Security Policy
 
-NaaB Tech builds and operates software and infrastructure. This policy explains how to report a vulnerability in that software, how a report is handled, and — separately — what authorization is required before any system is tested.
+NaaB Tech develops and operates software across its three areas of work: Cybersecurity, Software & Technology, and IT Solutions. This policy explains how to report a vulnerability in that software, how a report is handled, and — separately — what authorization is required before any system is tested.
 
 This policy is the organization-level default. An individual repository may include its own `SECURITY.md` with more specific guidance; where it exists, it takes precedence over this document for that repository.
 
@@ -10,7 +10,7 @@ This policy is the organization-level default. An individual repository may incl
 
 This policy applies to:
 
-- Software, APIs, web applications, infrastructure, configuration, and documentation published in NaaB Tech repositories, of any visibility.
+- Software, APIs, web applications, systems, configuration, and documentation published in NaaB Tech repositories, of any visibility.
 - Systems operated by NaaB Tech.
 
 It does **not** apply to:
@@ -144,7 +144,7 @@ Key points:
 - **Reporting does not authorize further testing.** Submitting a report is always permitted. Reading, scanning, or interacting with a system beyond what is needed to file the report is not.
 - **Testing live systems requires explicit written authorization from the owner of the system.** A verbal assurance, a public bug bounty listing, or the existence of this policy is not authorization.
 - **Authorization must be specific.** It should name the assets in scope, the window during which testing is permitted, the techniques allowed, and the contact point for unexpected results. An authorization for one system says nothing about any other.
-- **Customer systems require the customer's authorization.** NaaB Tech operating, hosting, or maintaining a system for a customer does not make NaaB Tech the owner of that system for testing purposes.
+- **Customer systems require the customer's authorization.** NaaB Tech operating or maintaining a system for a customer does not make NaaB Tech the owner of that system for testing purposes.
 - **If authorization is unclear, do not proceed.** Treat the activity as not permitted until the owner confirms it in writing. Questions can be sent to [info@naabtech.ir](mailto:info@naabtech.ir).
 
 ### Rules of engagement
@@ -157,7 +157,7 @@ Where authorization does exist, the following are outside it:
 - Introducing malware, or modifying data in a way that leaves the system in an altered state.
 - Introducing denial-of-service conditions, including sustained load, resource exhaustion, and lockout of legitimate users.
 - Destroying, corrupting, or deleting data, including test data, without written authorization.
-- Deceptive or destructive testing against shared infrastructure.
+- Deceptive or destructive testing against shared systems.
 - Using social engineering, physical intrusion, or impersonation of staff, contractors, or users.
 - Scanning, probing, or testing systems that are not named in the authorization.
 - Continuing to test after a report has been filed and remediation work has begun.
