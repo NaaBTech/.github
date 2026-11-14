@@ -54,6 +54,9 @@ jobs:
       - name: Check spelling
         run: codespell --check-hidden
 
+      - name: Check the Python scripts
+        run: ruff check scripts/
+
       - name: Check the validator's own tests
         run: python scripts/test_validate_docs.py
 

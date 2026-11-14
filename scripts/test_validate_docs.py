@@ -565,6 +565,12 @@ contact_links:
 ]
 
 
+def read_bytes(path):
+    """Read a file and close it, instead of relying on the garbage collector."""
+    with open(path, "rb") as handle:
+        return handle.read()
+
+
 def make_temp_repo(files=None, alternate_config_schema=None):
     """Create a temporary repository that the validator can run against."""
     temp_root = tempfile.mkdtemp()
@@ -579,7 +585,10 @@ def make_temp_repo(files=None, alternate_config_schema=None):
             os.path.join(temp_root, "schemas", schema_name),
         )
     if alternate_config_schema is not None:
-        with open(os.path.join(temp_root, "schemas", "github-issue-config.json"), "w", encoding="utf-8") as handle:
+        config_path = os.path.join(
+            temp_root, "schemas", "github-issue-config.json"
+        )
+        with open(config_path, "w", encoding="utf-8") as handle:
             json.dump(alternate_config_schema, handle)
     for relative, content in (files or {}).items():
         path = os.path.join(temp_root, relative.replace("/", os.sep))
@@ -587,8 +596,6 @@ def make_temp_repo(files=None, alternate_config_schema=None):
         with open(path, "w", encoding="utf-8") as handle:
             handle.write(content)
     return temp_root
-
-
 
 
 def run():
@@ -645,7 +652,9 @@ def run():
         negative += 1
         data, error = parse_yaml_text(text)
         if error is None:
-            failures.append(f"{name}: expected a YAML parse error, but the text parsed successfully")
+            failures.append(
+                f"{name}: expected a YAML parse error, but the text parsed successfully"
+            )
         elif expected.lower() not in error.lower():
             failures.append(f"{name}: expected the error to mention '{expected}', got '{error}'")
 
@@ -691,7 +700,9 @@ def run():
         shutil.rmtree(temp_root, ignore_errors=True)
 
     behavior += 1
-    errors, _warnings = run_checks(os.path.abspath(os.path.join(os.path.dirname(SCHEMA_SOURCE_DIR))))
+    errors, _warnings = run_checks(
+        os.path.abspath(os.path.join(os.path.dirname(SCHEMA_SOURCE_DIR)))
+    )
     if any("alternate_marker" in message for message in errors):
         failures.append(
             "issue configuration schema injection: the real repository must not report the "
@@ -758,7 +769,10 @@ def run():
             failures.append("path containment: a symlink pointing to an internal file was rejected")
     else:
         skipped += 2
-        print(f"  skipped 2 symlink case(s): symbolic links are not available here ({symlink_reason})")
+        print(
+            "  skipped 2 symlink case(s): symbolic links are not available here "
+            f"({symlink_reason})"
+        )
 
     for directory in (link_dir, outside_dir):
         if directory:
@@ -814,7 +828,8 @@ def run():
         relative, anchor, query = split_link_target(targets[0])
         if relative != "CONTRIBUTING.md" or query != "plain=1" or anchor is not None:
             failures.append(
-                f"markdown links: query string was split incorrectly: {relative!r} {anchor!r} {query!r}"
+                "markdown links: query string was split incorrectly: "
+                f"{relative!r} {anchor!r} {query!r}"
             )
 
     behavior += 1
@@ -841,7 +856,8 @@ def run():
         _errors, warnings = run_checks(temp_root)
         if any("other.md" in message for message in warnings):
             failures.append(
-                "markdown links: a document referenced only through an anchor was reported as an orphan"
+                "markdown links: a document referenced only through an anchor "
+                "was reported as an orphan"
             )
     finally:
         shutil.rmtree(temp_root, ignore_errors=True)
@@ -935,7 +951,10 @@ def run():
     files, rejected = repo_files(discovery_root, (".md",))
     names = {display for _path, display in files}
     if "docs/normal.md" not in names:
-        failures.append(f"file discovery: a normal Markdown file was not found, got {sorted(names)}")
+        failures.append(
+            "file discovery: a normal Markdown file was not found, "
+            f"got {sorted(names)}"
+        )
 
     behavior += 1
     files, rejected = repo_files(discovery_root, (".yml",))
@@ -1088,7 +1107,8 @@ def run():
         schemas = load_schemas(plain_root)
         if set(schemas) != {"issue_form", "vulnerability_form", "issue_config"}:
             failures.append(
-                f"path containment: a normal repository did not yield the three schemas, got {sorted(schemas)}"
+                "path containment: a normal repository did not yield the "
+                f"three schemas, got {sorted(schemas)}"
             )
     except SystemExit as exc:
         failures.append(f"path containment: a normal repository was rejected: {exc}")
@@ -1253,7 +1273,7 @@ def run():
     # Behavior cases: the schema refresh is transactional.
     # ------------------------------------------------------------------
     good_downloads = {
-        name: open(os.path.join(SCHEMA_SOURCE_DIR, name), "rb").read()
+        name: read_bytes(os.path.join(SCHEMA_SOURCE_DIR, name))
         for name in ("github-issue-forms.json", "github-issue-config.json")
     }
     for name in update_schemas.UPSTREAM_THIRD_PARTY:
@@ -1307,13 +1327,13 @@ def run():
 
     behavior += 1
     downloads = {
-        name: open(os.path.join(SCHEMA_SOURCE_DIR, name), "rb").read()
+        name: read_bytes(os.path.join(SCHEMA_SOURCE_DIR, name))
         for name in ("github-issue-forms.json", "github-issue-config.json")
     }
     for name in update_schemas.UPSTREAM_THIRD_PARTY:
-        downloads[name] = open(
-            os.path.join(SCHEMA_SOURCE_DIR, name.replace("/", os.sep)), "rb"
-        ).read()
+        downloads[name] = read_bytes(
+            os.path.join(SCHEMA_SOURCE_DIR, name.replace("/", os.sep))
+        )
     rebuilt = update_schemas.build_artifacts(downloads)
     for name in (
         "github-issue-forms.json",
@@ -1342,6 +1362,17 @@ def run():
             with open(path, "wb") as handle:
                 handle.write(original)
         return target_dir
+
+    def inject_restore_failure():
+        """Return the original copy2 and a version that fails on a restore."""
+        original = shutil.copy2
+
+        def failing(source, destination, *args, **kwargs):
+            if update_schemas.BACKUP_DIR_NAME in str(source):
+                raise OSError("injected restore failure")
+            return original(source, destination, *args, **kwargs)
+
+        return original, failing
 
     def inject_promotion_failure(fail_at):
         original_replace = os.replace
@@ -1379,7 +1410,8 @@ def run():
                     content = handle.read()
                 if content != b'{"original": true}\n':
                     failures.append(
-                        f"schema refresh: rollback after a failure at {label} did not restore {name}"
+                        f"schema refresh: rollback after a failure at {label} did not "
+                        f"restore {name}"
                     )
         finally:
             shutil.rmtree(temp_root, ignore_errors=True)
@@ -1395,12 +1427,7 @@ def run():
             backup_root = os.path.join(target_dir, update_schemas.BACKUP_DIR_NAME)
 
             original_replace, failing_replace = inject_promotion_failure(promote_count + 1)
-            original_copy2 = shutil.copy2
-
-            def failing_copy2(source, destination, *args, **kwargs):
-                if update_schemas.BACKUP_DIR_NAME in str(source):
-                    raise OSError("injected restore failure")
-                return original_copy2(source, destination, *args, **kwargs)
+            original_copy2, failing_copy2 = inject_restore_failure()
 
             os.replace = failing_replace
             shutil.copy2 = failing_copy2
@@ -1454,7 +1481,8 @@ def run():
                 with open(target, "rb") as handle:
                     if handle.read() != b'{"original": true}\n':
                         failures.append(
-                            f"schema refresh: recovery after a failed rollback did not restore {name}"
+                            "schema refresh: recovery after a failed rollback did not "
+                            f"restore {name}"
                         )
         finally:
             shutil.rmtree(temp_root, ignore_errors=True)
@@ -1638,7 +1666,8 @@ def run():
                 )
             if "nothing was changed" in cli_text:
                 failures.append(
-                    f"schema refresh: an incomplete rollback claimed that nothing changed: {cli_text!r}"
+                    "schema refresh: an incomplete rollback claimed that nothing "
+                    f"changed: {cli_text!r}"
                 )
             # The command line must not claim that every affected file can be
             # restored from the recovery directory.
@@ -1884,7 +1913,8 @@ def run():
                 )
             if "nothing was changed" in cli_text:
                 failures.append(
-                    f"schema refresh: an incomplete rollback claimed that nothing changed: {cli_text!r}"
+                    "schema refresh: an incomplete rollback claimed that nothing "
+                    f"changed: {cli_text!r}"
                 )
             if "original backup is missing" not in cli_text:
                 failures.append(
@@ -1938,7 +1968,7 @@ def run():
         staging = stage_for(temp_root, artifacts)
         update_schemas.promote(artifacts, staging, target_dir, temp_root)
         leftovers = []
-        for dirpath, dirnames, filenames in os.walk(target_dir):
+        for dirpath, _dirnames, filenames in os.walk(target_dir):
             for name in filenames:
                 if update_schemas.BACKUP_DIR_NAME in dirpath or name.endswith(".naabtech-restore"):
                     leftovers.append(os.path.join(dirpath, name))
@@ -1991,7 +2021,7 @@ def run():
             for name in artifacts:
                 candidate = os.path.join(directory, name)
                 if os.path.exists(candidate):
-                    preserved[candidate] = open(candidate, "rb").read()
+                    preserved[candidate] = read_bytes(candidate)
         return preserved
 
     behavior += 1
@@ -2087,7 +2117,7 @@ def run():
         for directory in earlier:
             candidate = os.path.join(directory, "f0.json")
             if os.path.exists(candidate):
-                preserved[candidate] = open(candidate, "rb").read()
+                preserved[candidate] = read_bytes(candidate)
         if not preserved:
             failures.append(
                 "schema refresh: the earlier failed transaction left no recovery copy"
@@ -2105,7 +2135,8 @@ def run():
             with open(path, "rb") as handle:
                 if handle.read() != content:
                     failures.append(
-                        f"schema refresh: a successful transaction overwrote the recovery copy {path}"
+                        "schema refresh: a successful transaction overwrote the "
+                        f"recovery copy {path}"
                     )
     finally:
         shutil.rmtree(temp_root, ignore_errors=True)
@@ -2167,6 +2198,77 @@ def run():
     finally:
         shutil.rmtree(temp_root, ignore_errors=True)
 
+
+    # ------------------------------------------------------------------
+    # Behavior cases: the layout tree in the README stays accurate.
+    # ------------------------------------------------------------------
+    behavior += 1
+    temp_root = make_temp_repo()
+    try:
+
+        def layout_tree_for(root):
+            """Build a tree that lists every file and directory under root."""
+            lines = []
+
+            def walk(directory, depth):
+                entries = sorted(os.listdir(directory))
+                directories = [
+                    name for name in entries
+                    if os.path.isdir(os.path.join(directory, name))
+                    and name not in ("__pycache__", ".git", "node_modules")
+                    and not name.startswith(".staging-")
+                    and not name.startswith(".naabtech-")
+                ]
+                files = [name for name in entries if name not in directories]
+                everything = sorted(directories) + sorted(files)
+                for index, name in enumerate(everything):
+                    last = index == len(everything) - 1
+                    marker = "\u2514\u2500\u2500 " if last else "\u251c\u2500\u2500 "
+                    path = os.path.join(directory, name)
+                    if os.path.isdir(path):
+                        lines.append("    " * depth + marker + name + "/")
+                        walk(path, depth + 1)
+                    else:
+                        lines.append("    " * depth + marker + name)
+
+            walk(root, 0)
+            return "```text\n" + "\n".join(lines) + "\n```\n"
+
+        os.makedirs(os.path.join(temp_root, "docs"), exist_ok=True)
+        with open(os.path.join(temp_root, "docs", "guide.md"), "w", encoding="utf-8") as handle:
+            handle.write("A guide.\n")
+        with open(os.path.join(temp_root, "README.md"), "w", encoding="utf-8") as handle:
+            handle.write("# Test\n\n" + layout_tree_for(temp_root))
+        errors, _warnings = run_checks(temp_root)
+        tree_errors = [message for message in errors if "layout tree" in message]
+        if tree_errors:
+            failures.append(
+                f"layout tree: an accurate tree was reported as wrong: {tree_errors}"
+            )
+
+        # A file that is not in the tree is reported.
+        with open(os.path.join(temp_root, "docs", "extra.md"), "w", encoding="utf-8") as handle:
+            handle.write("An extra file.\n")
+        errors, _warnings = run_checks(temp_root)
+        if not any("does not list docs/extra.md" in message for message in errors):
+            failures.append(
+                "layout tree: a file that is not in the tree was not reported"
+            )
+
+        # A path in the tree that does not exist is reported.
+        tree = layout_tree_for(temp_root)
+        tree = tree.replace(
+            "\u2514\u2500\u2500 guide.md", "\u2514\u2500\u2500 missing.md"
+        )
+        with open(os.path.join(temp_root, "README.md"), "w", encoding="utf-8") as handle:
+            handle.write("# Test\n\n" + tree)
+        errors, _warnings = run_checks(temp_root)
+        if not any("lists docs/missing.md" in message for message in errors):
+            failures.append(
+                "layout tree: a path in the tree that does not exist was not reported"
+            )
+    finally:
+        shutil.rmtree(temp_root, ignore_errors=True)
 
     # ------------------------------------------------------------------
     # Behavior cases: the schema updater stays inside the repository.
@@ -2265,7 +2367,8 @@ def run():
                 pass
             else:
                 failures.append(
-                    "schema updater: a schemas directory pointing outside the repository was accepted"
+                    "schema updater: a schemas directory pointing outside the "
+                    "repository was accepted"
                 )
             # Even if the first check were bypassed, the lock must not be
             # created in the external directory either.
@@ -2346,7 +2449,8 @@ def run():
                 pass
             else:
                 failures.append(
-                    "schema updater: a backup directory pointing outside the repository was accepted"
+                    "schema updater: a backup directory pointing outside the "
+                    "repository was accepted"
                 )
             ok, detail = outside_is_untouched(outside)
             if not ok:
@@ -2381,7 +2485,8 @@ def run():
                 pass
             else:
                 failures.append(
-                    "schema updater: an artifact target pointing outside the repository was accepted"
+                    "schema updater: an artifact target pointing outside the "
+                    "repository was accepted"
                 )
             ok, detail = outside_is_untouched(outside)
             if not ok:
@@ -2487,7 +2592,6 @@ def run():
 
     checked = negative + positive + behavior
     applicable = checked + skipped
-    total = checked
     print(
         f"validate_docs tests: {negative} negative case(s), {positive} positive control(s), "
         f"and {behavior} behavior case(s) checked ({checked} checked, {skipped} skipped, "

@@ -72,6 +72,7 @@ Create a focused branch from the default branch. If you do not have write access
 | `fix/` | A defect fix |
 | `docs/` | Documentation only |
 | `refactor/` | A change to internal structure with no behavior change |
+| `chore/` | Maintenance that changes no behavior, such as a license, a dependency update, or a spelling fix |
 | `security/` | A security improvement or hardening change |
 
 Examples:
@@ -81,6 +82,7 @@ feature/session-token-rotation
 fix/incorrect-timezone-handling
 docs/deployment-guide
 refactor/extract-request-parser
+chore/update-pinned-tooling
 security/tighten-request-body-limits
 ```
 

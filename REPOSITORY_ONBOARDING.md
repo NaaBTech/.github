@@ -89,7 +89,7 @@ Reference: [Creating a custom security configuration](https://docs.github.com/en
 ## 4. Development Workflow
 
 - [ ] **Branch protection or rulesets** — on the default branch, requiring review before merge, and blocking force pushes and branch deletion. Rulesets are preferred where available because they can be configured at the organization level.
-- [ ] **Review requirements** — a second approval for changes that touch authentication, authorization, cryptography, or deployment configuration.
+- [ ] **Review requirements** — a second approval for changes that touch authentication, authorization, cryptography, or deployment configuration. A required review needs at least two people who can approve, so it is only worth turning on once a second reviewer exists; until then it would block every merge.
 - [ ] **Continuous integration** — a workflow under `.github/workflows/` that builds and tests the project on every pull request.
 - [ ] **Automated tests** — the test suite runs in CI, and a failing test fails the build.
 - [ ] **Dependabot** — version updates enabled, with a weekly schedule.

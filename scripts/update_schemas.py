@@ -19,6 +19,7 @@ Apache-2.0 license and NOTICE files for the vendored material, and rewrites
 schemas/PROVENANCE.json.
 """
 
+import contextlib
 import datetime
 import hashlib
 import json
@@ -30,9 +31,9 @@ import urllib.request
 
 try:
     from jsonschema.validators import validator_for
-except ImportError:  # pragma: no cover
+except ImportError as exc:  # pragma: no cover
     sys.stderr.write("jsonschema is required: pip install -r requirements-docs.txt\n")
-    raise SystemExit(2)
+    raise SystemExit(2) from exc
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 SCHEMA_DIR = os.path.join(ROOT, "schemas")
@@ -146,8 +147,8 @@ def contained_path(root, relative, description, allow_missing=False):
     candidate = os.path.join(canonical_root, relative.replace("/", os.sep))
     try:
         resolved = os.path.realpath(candidate)
-    except (OSError, ValueError):
-        raise UpdateError(f"{description} cannot be resolved: {candidate}")
+    except (OSError, ValueError) as exc:
+        raise UpdateError(f"{description} cannot be resolved: {candidate}") from exc
     if not _is_within(canonical_root, resolved):
         raise UpdateError(
             f"{description} is outside {canonical_root}: {candidate} resolves to {resolved}"
@@ -188,7 +189,7 @@ def canonical_schema_dir(root=None):
         raise UpdateError(
             "the schemas directory is not usable: it must be a directory inside the "
             f"repository {canonical_root}. {exc}"
-        )
+        ) from exc
 
 
 def download(url):
@@ -217,7 +218,10 @@ def apply_min_length_patch(schema):
         "additionalProperties": False,
     }
     extended["properties"]["min_length"] = {
-        "description": "Prevents form submission until the response contains at least the specified number of characters.",
+        "description": (
+            "Prevents form submission until the response contains at least "
+            "the specified number of characters."
+        ),
         "type": "integer",
         "minimum": 0,
     }
@@ -244,7 +248,10 @@ def derive_vulnerability_schema(issue_forms_schema):
     # The identifier points at the file in this repository. It is not a URL that
     # is published anywhere, so it must not look like one.
     schema["$id"] = "https://github.com/NaaBTech/.github/schemas/github-vulnerability-report-form.json"
-    schema["title"] = "NaaB Tech private vulnerability reporting form schema (derived, not an official GitHub schema)"
+    schema["title"] = (
+        "NaaB Tech private vulnerability reporting form schema "
+        "(derived, not an official GitHub schema)"
+    )
     schema["$comment"] = (
         "Derived from github-issue-forms.json by restricting the element types and "
         "top-level keys that GitHub supports for private vulnerability reporting "
@@ -266,7 +273,11 @@ def derive_vulnerability_schema(issue_forms_schema):
         raise UpdateError(f"expected {len(VULNERABILITY_TYPES)} element branches, kept {len(kept)}")
     definitions["form_item"]["allOf"] = kept
 
-    schema["properties"] = {k: v for k, v in schema["properties"].items() if k in VULNERABILITY_TOP_LEVEL}
+    schema["properties"] = {
+        key: value
+        for key, value in schema["properties"].items()
+        if key in VULNERABILITY_TOP_LEVEL
+    }
     schema["required"] = ["name", "description", "body"]
     return schema
 
@@ -276,7 +287,7 @@ def check_is_schema(name, data):
     try:
         validator_for(data).check_schema(data)
     except Exception as exc:  # noqa: BLE001
-        raise UpdateError(f"{name} is not a valid JSON Schema: {exc}")
+        raise UpdateError(f"{name} is not a valid JSON Schema: {exc}") from exc
 
 
 def build_artifacts(downloads):
@@ -285,7 +296,7 @@ def build_artifacts(downloads):
     ``downloads`` maps a file name to the bytes fetched for it. Nothing is
     written to disk here, so a failure leaves the repository untouched.
     """
-    for name, meta in UPSTREAM_SCHEMAS.items():
+    for name in UPSTREAM_SCHEMAS:
         if name not in downloads:
             raise UpdateError(f"missing download for {name}")
     for name in UPSTREAM_THIRD_PARTY:
@@ -297,7 +308,7 @@ def build_artifacts(downloads):
         try:
             parsed[name] = json.loads(downloads[name].decode("utf-8"))
         except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-            raise UpdateError(f"{name} could not be parsed as JSON: {exc}")
+            raise UpdateError(f"{name} could not be parsed as JSON: {exc}") from exc
         check_is_schema(name, parsed[name])
 
     issue_forms = apply_min_length_patch(parsed["github-issue-forms.json"])
@@ -314,7 +325,7 @@ def build_artifacts(downloads):
         artifacts[name] = downloads[name]
 
     provenance = {
-        "retrieved_utc": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "retrieved_utc": datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "source": "https://www.schemastore.org/",
         "upstream_repository": UPSTREAM_REPOSITORY,
         "upstream_license": UPSTREAM_LICENSE,
@@ -343,13 +354,19 @@ def build_artifacts(downloads):
             "upstream_license": UPSTREAM_LICENSE,
             "patched": name == "github-issue-forms.json",
             "derived": False,
-            "modification_notice_key": MODIFICATION_KEY if name == "github-issue-forms.json" else None,
+            "modification_notice_key": (
+                MODIFICATION_KEY if name == "github-issue-forms.json" else None
+            ),
         }
 
     derived_name = "github-vulnerability-report-form.json"
     provenance["schemas"][derived_name] = {
         "derived_from": "github-issue-forms.json",
-        "upstream_url": "https://docs.github.com/en/code-security/how-tos/report-and-fix-vulnerabilities/configure-vulnerability-reporting/configure-for-a-repository",
+        "upstream_url": (
+            "https://docs.github.com/en/code-security/how-tos/report-and-fix-"
+            "vulnerabilities/configure-vulnerability-reporting/"
+            "configure-for-a-repository"
+        ),
         "vendored_sha256": sha256_bytes(artifacts[derived_name]),
         "upstream_license": UPSTREAM_LICENSE,
         "license_note": (
@@ -411,7 +428,9 @@ def verify_staged(artifacts, staging_dir):
             try:
                 json.loads(staged.decode("utf-8"))
             except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-                raise UpdateError(f"staged file is not valid JSON: {name}: {exc}")
+                raise UpdateError(
+                    f"staged file is not valid JSON: {name}: {exc}"
+                ) from exc
 
 
 def cleanup_transaction_dir(transaction_dir, backup_root):
@@ -460,11 +479,11 @@ def acquire_update_lock(target_dir, trusted_root=None):
     )
     try:
         handle = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-    except FileExistsError:
+    except FileExistsError as exc:
         raise UpdateError(
             f"another schema refresh appears to be running: {path} exists. "
             "If no refresh is in progress, remove that file and try again."
-        )
+        ) from exc
     with os.fdopen(handle, "w") as stream:
         stream.write(f"pid={os.getpid()}\n")
     return path
@@ -552,7 +571,9 @@ def promote(artifacts, staging_dir, target_dir, trusted_root=None):
     power loss between two replacements can still leave a mixture, and the
     backup directory is what makes that recoverable by hand.
     """
-    repository_root = os.path.realpath(trusted_root) if trusted_root else canonical_repository_root()
+    repository_root = (
+        os.path.realpath(trusted_root) if trusted_root else canonical_repository_root()
+    )
     target_root = os.path.realpath(target_dir)
     if not _is_within(repository_root, target_root):
         raise UpdateError(
@@ -701,10 +722,8 @@ def promote(artifacts, staging_dir, target_dir, trusted_root=None):
                 )
             # The backup root is removed only when it is empty, so an earlier
             # recovery directory is never destroyed.
-            try:
+            with contextlib.suppress(OSError):
                 os.rmdir(backup_root)
-            except OSError:
-                pass
 
 
 def refresh(root=None):

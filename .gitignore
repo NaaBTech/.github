@@ -5,6 +5,9 @@ __pycache__/
 # Node.js dependencies installed by npm.
 node_modules/
 
+# The cache that ruff writes when it runs.
+.ruff_cache/
+
 # Working files of scripts/update_schemas.py.
 # schemas/.naabtech-backups/ holds the per-transaction recovery copies. A backup
 # that could not be restored is deliberately left there: it is the only
