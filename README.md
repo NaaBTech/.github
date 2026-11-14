@@ -60,13 +60,13 @@ Nothing here is application code. It is documentation and configuration, maintai
 │   ├── PROVENANCE.json                # Where each schema came from, and when
 │   ├── README.md                      # Schema sources, licensing, and maintenance
 │   └── third-party/
-│       ├── LICENSE-Apache-2.0.txt     # Licence text covering the vendored schemas
+│       ├── LICENSE-Apache-2.0.txt     # License text covering the vendored schemas
 │       └── NOTICE-SchemaStore.txt     # Upstream notice attribution
 ├── scripts/
 │   ├── validate_docs.py               # File, form, and link validation
 │   ├── test_validate_docs.py          # Validator tests: negative cases and positive controls
 │   └── update_schemas.py              # Refreshes the vendored schemas
-├── .gitattributes                     # Normalises line endings to LF
+├── .gitattributes                     # Normalizes line endings to LF
 ├── .gitignore                         # Ignores Python bytecode and node_modules
 ├── .markdownlint.json                 # markdownlint configuration
 ├── .markdownlintignore                # Paths excluded from markdownlint
@@ -125,7 +125,7 @@ The default issue forms apply labels automatically: `bug`, `enhancement`, and `q
 
 **GitHub applies a label only if a label with that name already exists in the destination repository.** A label created in this repository does not propagate to other repositories.
 
-Two things are therefore required for automatic labelling to work:
+Two things are therefore required for automatic labeling to work:
 
 1. **The label must exist in the destination repository.** It is present in this repository, because the default forms live here.
 2. **New repositories need the labels up front.** Organization owners can configure default labels under **Organization Settings → Repository → General → Repository labels**. Default labels are included in **newly created repositories only** — adding, editing, or deleting an organization default label does not add, edit, or delete that label in existing repositories.
@@ -167,7 +167,7 @@ Anything not on this list must be confirmed with the organization owners before 
 GitHub does not use an organization's `.github` repository as the source of a default license for other projects, so each software project needs its own license. That is a separate matter from licensing the contents of *this* repository — its documentation, the Python scripts, and the vendored schemas.
 
 - Until a license is chosen, the contents of this repository are **not** licensed for reuse. The public visibility of the repository does not grant permission to copy or redistribute it.
-- **The vendored schemas are a separate matter and are already covered.** The two schemas taken from [SchemaStore](https://github.com/SchemaStore/schemastore) are redistributed under that repository's **Apache-2.0** license, with the licence text at [`schemas/third-party/LICENSE-Apache-2.0.txt`](schemas/third-party/LICENSE-Apache-2.0.txt) and the upstream notice at [`schemas/third-party/NOTICE-SchemaStore.txt`](schemas/third-party/NOTICE-SchemaStore.txt). The modified schema carries a notice stating what was changed, and the derived schema is identified as a derived work. See [`schemas/README.md`](schemas/README.md) and `schemas/PROVENANCE.json`.
+- **The vendored schemas are a separate matter and are already covered.** The two schemas taken from [SchemaStore](https://github.com/SchemaStore/schemastore) are redistributed under that repository's **Apache-2.0** license, with the license text at [`schemas/third-party/LICENSE-Apache-2.0.txt`](schemas/third-party/LICENSE-Apache-2.0.txt) and the upstream notice at [`schemas/third-party/NOTICE-SchemaStore.txt`](schemas/third-party/NOTICE-SchemaStore.txt). The modified schema carries a notice stating what was changed, and the derived schema is identified as a derived work. See [`schemas/README.md`](schemas/README.md) and `schemas/PROVENANCE.json`.
 - **No root-level `LICENSE` file was added**, because adding one would imply that the whole repository had been licensed.
 
 Selecting a license for this repository requires the owners' approval and, where appropriate, legal review.
@@ -177,9 +177,9 @@ Selecting a license for this repository requires the owners' approval and, where
 ## Maintaining These Files
 
 - **Single source of truth.** These defaults are edited here and nowhere else. Individual repositories are not expected to copy them.
-- **Consistent terminology.** Use "NaaB Tech" for the company, "NaaB Tech organization" for the GitHub organization, and `naabtech.ir` for the website. Keep the Persian brand name ناب تک to the organization profile and the root README.
+- **Consistent terminology.** Use "NaaB Tech" for the company, "NaaB Tech organization" for the GitHub organization, and `naabtech.ir` for the website. Write the brand name in English, in the organization profile and the root README.
 - **No fabricated information.** Never add contact addresses, customer names, certifications, partnerships, response-time commitments, funding details, or project statistics that have not been confirmed. Use only the channels in [Officially Published Channels](#officially-published-channels). Where a value is genuinely required but not yet available, use a clearly marked placeholder and track it as an open item.
-- **No unapproved legal commitments.** Safe-harbour provisions, immunity, indemnification, response-time guarantees, and bug bounty terms are business and legal decisions. They require the organization owners' approval and, where appropriate, legal review before they are written into these files.
+- **No unapproved legal commitments.** Safe-harbor provisions, immunity, indemnification, response-time guarantees, and bug bounty terms are business and legal decisions. They require the organization owners' approval and, where appropriate, legal review before they are written into these files.
 - **Repository-specific rules win.** A default must stay general enough to apply across different technologies. Anything that only makes sense for one repository belongs in that repository.
 - **Change discipline.** Changes to these files follow the conventions in [`CONTRIBUTING.md`](CONTRIBUTING.md), including the branch naming and commit message conventions described there.
 - **Validate before merging.** The `Validate documentation` workflow checks YAML syntax, the GitHub form schemas, required file naming, and internal links on every pull request. The validation itself reads only files in this repository, so a third-party website outage cannot fail a documentation change. Installing the tooling still needs access to the Python and npm package registries, so a registry outage can prevent the workflow from completing setup. Run the same checks locally:
