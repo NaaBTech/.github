@@ -2,21 +2,23 @@
 
 <div align="center">
 
-**Secure software. Reliable infrastructure.**
+**Technology. Innovation. Security.**
 
 </div>
 
-NaaB Tech (ناب تک) is a technology company focused on cybersecurity, software engineering, and infrastructure. Our approach treats security as part of the design rather than a final check before release.
+NaaB Tech is a technology company working across IT, software, and cybersecurity. We treat security as part of the design rather than a final check before release.
 
 ## What We Do
 
-- **Cybersecurity** — Application security, API security, and security engineering.
-- **Software Engineering** — Software development and practical engineering solutions.
-- **Infrastructure & Networking** — Networking, servers, and infrastructure engineering.
+- **Cybersecurity** — Protecting systems, applications, and the data they handle.
+- **Software & Technology** — Designing and building software and technology products.
+- **IT Solutions** — Advising on, and implementing, the technology that an organization relies on.
 
 ## Featured Projects
 
-Public project repositories are listed here as they are published. Contributions are welcome in any public repository, where each project may set its own contribution requirements.
+Our public repositories are the best place to see what we build in practice, and contributions to them are welcome. Each project sets its own scope and contribution process, so the repository itself is the best place to start.
+
+Before opening a pull request, read the project's `CONTRIBUTING.md`. For anything security-sensitive, follow its `SECURITY.md` instead of opening a public issue.
 
 ---
 

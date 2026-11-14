@@ -177,7 +177,7 @@ Selecting a license for this repository requires the owners' approval and, where
 ## Maintaining These Files
 
 - **Single source of truth.** These defaults are edited here and nowhere else. Individual repositories are not expected to copy them.
-- **Consistent terminology.** Use "NaaB Tech" for the company, "NaaB Tech organization" for the GitHub organization, and `naabtech.ir` for the website. Keep the Persian brand name ناب تک to the organization profile and the root README.
+- **Consistent terminology.** Use "NaaB Tech" for the company, "NaaB Tech organization" for the GitHub organization, and `naabtech.ir` for the website. Write the brand name in English, in the organization profile and the root README.
 - **No fabricated information.** Never add contact addresses, customer names, certifications, partnerships, response-time commitments, funding details, or project statistics that have not been confirmed. Use only the channels in [Officially Published Channels](#officially-published-channels). Where a value is genuinely required but not yet available, use a clearly marked placeholder and track it as an open item.
 - **No unapproved legal commitments.** Safe-harbor provisions, immunity, indemnification, response-time guarantees, and bug bounty terms are business and legal decisions. They require the organization owners' approval and, where appropriate, legal review before they are written into these files.
 - **Repository-specific rules win.** A default must stay general enough to apply across different technologies. Anything that only makes sense for one repository belongs in that repository.
