@@ -165,7 +165,7 @@ def canonical_repository_root(root=None):
     """The canonical repository root that every path is checked against.
 
     ``root`` defaults to the repository that holds this script. The parameter
-    exists so that the behaviour can be exercised against a temporary
+    exists so that the behavior can be exercised against a temporary
     directory without weakening the containment check.
     """
     return os.path.realpath(root) if root else os.path.realpath(ROOT)
@@ -524,7 +524,7 @@ def promote(artifacts, staging_dir, target_dir, trusted_root=None):
 
     ``trusted_root`` is the directory that the schema directory and the
     staging directory must sit inside. It defaults to the repository root. The
-    parameter exists so that the behaviour can be exercised against a
+    parameter exists so that the behavior can be exercised against a
     temporary directory without weakening the containment check.
 
     Each file is replaced individually, so a failure part way through can leave

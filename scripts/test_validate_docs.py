@@ -9,7 +9,7 @@ The suite contains three kinds of case:
 - **Positive control cases** - valid documents. The validator must report no
   errors at all for these, so that the checks cannot become so strict that
   they reject a good form.
-- **Behaviour cases** - specific behaviours that were implemented in response
+- **Behavior cases** - specific behaviors that were implemented in response
   to a confirmed defect: schema injection, path containment, and the Markdown
   link edge cases.
 
@@ -595,7 +595,7 @@ def run():
     failures = []
     positive = 0
     negative = 0
-    behaviour = 0
+    behavior = 0
     skipped = 0
 
     # ------------------------------------------------------------------
@@ -662,10 +662,10 @@ def run():
             failures.append(f"{name}: expected an error containing '{expected}', got {errors}")
 
     # ------------------------------------------------------------------
-    # Behaviour case: the issue configuration schema is taken from the
+    # Behavior case: the issue configuration schema is taken from the
     # repository being validated, not from a global constant.
     # ------------------------------------------------------------------
-    behaviour += 1
+    behavior += 1
     alternate_schema = {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "$id": "https://example.invalid/alternate-issue-config.json",
@@ -690,7 +690,7 @@ def run():
     finally:
         shutil.rmtree(temp_root, ignore_errors=True)
 
-    behaviour += 1
+    behavior += 1
     errors, _warnings = run_checks(os.path.abspath(os.path.join(os.path.dirname(SCHEMA_SOURCE_DIR))))
     if any("alternate_marker" in message for message in errors):
         failures.append(
@@ -699,23 +699,23 @@ def run():
         )
 
     # ------------------------------------------------------------------
-    # Behaviour cases: path containment.
+    # Behavior cases: path containment.
     # ------------------------------------------------------------------
     repo_root = os.path.abspath(os.path.join(os.path.dirname(SCHEMA_SOURCE_DIR)))
-    behaviour += 1
+    behavior += 1
     if resolve_within(repo_root, "CONTRIBUTING.md") is None:
         failures.append("path containment: a normal internal file was rejected")
 
-    behaviour += 1
+    behavior += 1
     if resolve_within(repo_root, "../../../../Windows/win.ini") is not None:
         failures.append("path containment: a relative path escaping the root was accepted")
 
-    behaviour += 1
+    behavior += 1
     outside = os.path.abspath(os.path.join(repo_root, "..", "..", "outside.txt"))
     if resolve_within(repo_root, outside) is not None:
         failures.append("path containment: an absolute path outside the root was accepted")
 
-    behaviour += 1
+    behavior += 1
     if resolve_within(repo_root, "does-not-exist.md") is None:
         failures.append("path containment: a nonexistent internal target was rejected")
 
@@ -750,10 +750,10 @@ def run():
             outside_dir = None
 
     if symlink_supported:
-        behaviour += 1
+        behavior += 1
         if resolve_within(link_dir, "escape.md") is not None:
             failures.append("path containment: a symlink pointing outside the root was accepted")
-        behaviour += 1
+        behavior += 1
         if resolve_within(link_dir, "inside.md") is None:
             failures.append("path containment: a symlink pointing to an internal file was rejected")
     else:
@@ -767,7 +767,7 @@ def run():
     # The same rule is exercised on every platform by simulating what a
     # symbolic link resolves to, so the containment decision is covered even
     # where the account cannot create a link.
-    behaviour += 1
+    behavior += 1
     original_realpath = os.path.realpath
     simulated_outside = os.path.abspath(os.path.join(tempfile.gettempdir(), "simulated-outside.md"))
 
@@ -785,7 +785,7 @@ def run():
     if accepted:
         failures.append("path containment: a simulated symlink escape was accepted")
 
-    behaviour += 1
+    behavior += 1
     original_realpath = os.path.realpath
     simulated_inside = os.path.join(original_realpath(repo_root), "CONTRIBUTING.md")
 
@@ -804,9 +804,9 @@ def run():
         failures.append("path containment: a simulated symlink to an internal file was rejected")
 
     # ------------------------------------------------------------------
-    # Behaviour cases: Markdown link handling.
+    # Behavior cases: Markdown link handling.
     # ------------------------------------------------------------------
-    behaviour += 1
+    behavior += 1
     targets = extract_link_targets("[x](CONTRIBUTING.md?plain=1)\n")
     if len(targets) != 1:
         failures.append("markdown links: a query string link was not extracted")
@@ -817,22 +817,22 @@ def run():
                 f"markdown links: query string was split incorrectly: {relative!r} {anchor!r} {query!r}"
             )
 
-    behaviour += 1
+    behavior += 1
     relative, _anchor, _query = split_link_target("my%20file.md")
     if relative != "my file.md":
         failures.append(f"markdown links: a percent-encoded target was not decoded: {relative!r}")
 
-    behaviour += 1
+    behavior += 1
     relative, anchor, _query = split_link_target("<my file.md>")
     if relative != "my file.md" or anchor is not None:
         failures.append(f"markdown links: an angle-bracketed target was not handled: {relative!r}")
 
-    behaviour += 1
+    behavior += 1
     targets = extract_link_targets("[x][ref]\n\n[ref]: MISSING.md\n")
     if "MISSING.md" not in targets:
         failures.append("markdown links: a reference-style link definition was not extracted")
 
-    behaviour += 1
+    behavior += 1
     temp_root = make_temp_repo(files={
         "README.md": "# Root\n\n[see other](other.md#section)\n",
         "other.md": "# Other\n\n## Section\n",
@@ -846,7 +846,7 @@ def run():
     finally:
         shutil.rmtree(temp_root, ignore_errors=True)
 
-    behaviour += 1
+    behavior += 1
     temp_root = make_temp_repo(files={
         "README.md": "# Root\n\n[x](other.md#usage-1)\n",
         "other.md": "# Other\n\n## Usage\n\n## Usage\n",
@@ -861,7 +861,7 @@ def run():
     finally:
         shutil.rmtree(temp_root, ignore_errors=True)
 
-    behaviour += 1
+    behavior += 1
     temp_root = make_temp_repo(files={
         "README.md": "# Root\n\n```text\n[x](MISSING.md)\n```\n\n[x](MISSING.md)\n",
     })
@@ -876,7 +876,7 @@ def run():
     finally:
         shutil.rmtree(temp_root, ignore_errors=True)
 
-    behaviour += 1
+    behavior += 1
     temp_root = make_temp_repo(files={
         "doc.md": "# Title Here\n\n## A Heading With Punctuation!\n\n### Usage\n\n### Usage\n",
     })
@@ -893,7 +893,7 @@ def run():
         shutil.rmtree(temp_root, ignore_errors=True)
 
     # ------------------------------------------------------------------
-    # Behaviour cases: file discovery rejects links that leave the repository.
+    # Behavior cases: file discovery rejects links that leave the repository.
     # ------------------------------------------------------------------
     discovery_root = make_temp_repo(files={
         "README.md": "# Root\n",
@@ -931,20 +931,20 @@ def run():
         print(f"  skipped 6 discovery symlink case(s): symbolic links are not available here "
               f"({type(exc).__name__}: {exc})")
 
-    behaviour += 1
+    behavior += 1
     files, rejected = repo_files(discovery_root, (".md",))
     names = {display for _path, display in files}
     if "docs/normal.md" not in names:
         failures.append(f"file discovery: a normal Markdown file was not found, got {sorted(names)}")
 
-    behaviour += 1
+    behavior += 1
     files, rejected = repo_files(discovery_root, (".yml",))
     names = {display for _path, display in files}
     if ".github/ISSUE_TEMPLATE/forms.yml" not in names:
         failures.append(f"file discovery: a normal YAML file was not found, got {sorted(names)}")
 
     if symlink_cases:
-        behaviour += 1
+        behavior += 1
         files, rejected = repo_files(discovery_root, (".md",))
         names = {display for _path, display in files}
         rejected_names = {name for name, _reason in rejected}
@@ -955,7 +955,7 @@ def run():
                 f"file discovery: the external Markdown symlink was not reported, got {rejected}"
             )
 
-        behaviour += 1
+        behavior += 1
         files, rejected = repo_files(discovery_root, (".yml",))
         names = {display for _path, display in files}
         rejected_names = {name for name, _reason in rejected}
@@ -966,7 +966,7 @@ def run():
                 f"file discovery: the external YAML symlink was not reported, got {rejected}"
             )
 
-        behaviour += 1
+        behavior += 1
         files, rejected = repo_files(discovery_root, (".md",))
         names = {display for _path, display in files}
         if "internal.md" not in names:
@@ -974,7 +974,7 @@ def run():
         if "alias.md" not in names:
             failures.append("file discovery: a second internal symlink was not accepted")
 
-        behaviour += 1
+        behavior += 1
         files, rejected = repo_files(discovery_root, (".md",))
         rejected_names = {name for name, _reason in rejected}
         if "broken.md" not in rejected_names:
@@ -982,7 +982,7 @@ def run():
                 f"file discovery: a symlink with a missing target was not reported, got {rejected}"
             )
 
-        behaviour += 1
+        behavior += 1
         files, rejected = repo_files(discovery_root, (".md",))
         names = {display for _path, display in files}
         if "linkdir/docs/normal.md" not in names:
@@ -991,7 +991,7 @@ def run():
                 f"got {sorted(names)}"
             )
 
-        behaviour += 1
+        behavior += 1
         # A required file that is a symlink outside the repository must be
         # reported as unusable rather than accepted.
         os.symlink(os.path.join(outside_root, "external.md"),
@@ -1014,7 +1014,7 @@ def run():
     try:
         os.symlink(os.path.join(outside_root, "poison.yml"),
                     os.path.join(discovery_root, "poison.yml"))
-        behaviour += 1
+        behavior += 1
         _files, rejected = repo_files(discovery_root, (".yml",))
         rejected_names = {name for name, _reason in rejected}
         if "poison.yml" not in rejected_names:
@@ -1031,7 +1031,7 @@ def run():
     shutil.rmtree(outside_root, ignore_errors=True)
 
     # ------------------------------------------------------------------
-    # Behaviour cases: nothing outside the repository is read or listed.
+    # Behavior cases: nothing outside the repository is read or listed.
     # ------------------------------------------------------------------
     marker = "EXTERNAL-SCHEMA-MARKER"
     external_schema = {
@@ -1081,7 +1081,7 @@ def run():
         symlinks_available = False
         symlink_reason = f"{type(exc).__name__}: {exc}"
 
-    behaviour += 1
+    behavior += 1
     # Normal repository paths: everything resolves and is read.
     plain_root = repo_with_schemas()
     try:
@@ -1096,7 +1096,7 @@ def run():
         shutil.rmtree(plain_root, ignore_errors=True)
 
     if symlinks_available:
-        behaviour += 1
+        behavior += 1
         # An external schemas directory symlink must never be read.
         root = make_temp_repo()
         shutil.rmtree(os.path.join(root, "schemas"))
@@ -1111,7 +1111,7 @@ def run():
             failures.append("path containment: the external schema content was read")
         shutil.rmtree(root, ignore_errors=True)
 
-        behaviour += 1
+        behavior += 1
         # An external individual schema symlink must never be read.
         root = repo_with_schemas()
         os.remove(os.path.join(root, "schemas", "github-issue-forms.json"))
@@ -1127,7 +1127,7 @@ def run():
             failures.append("path containment: the external schema content was read")
         shutil.rmtree(root, ignore_errors=True)
 
-        behaviour += 1
+        behavior += 1
         # A nested parent symlink must not smuggle an external directory in.
         root = make_temp_repo()
         shutil.rmtree(os.path.join(root, "schemas"))
@@ -1144,7 +1144,7 @@ def run():
             failures.append("path containment: the external schema content was read")
         shutil.rmtree(root, ignore_errors=True)
 
-        behaviour += 1
+        behavior += 1
         # An internal schemas directory symlink is legitimate.
         root = make_temp_repo()
         internal = os.path.join(root, "real-schemas")
@@ -1159,7 +1159,7 @@ def run():
             failures.append(f"path containment: an internal schemas symlink was rejected: {exc}")
         shutil.rmtree(root, ignore_errors=True)
 
-        behaviour += 1
+        behavior += 1
         # An internal file symlink is legitimate.
         root = repo_with_schemas()
         os.remove(os.path.join(root, "schemas", "github-issue-forms.json"))
@@ -1171,7 +1171,7 @@ def run():
             failures.append(f"path containment: an internal file symlink was rejected: {exc}")
         shutil.rmtree(root, ignore_errors=True)
 
-        behaviour += 1
+        behavior += 1
         # A symlink whose target does not exist is reported, not followed.
         root = repo_with_schemas()
         os.remove(os.path.join(root, "schemas", "github-issue-forms.json"))
@@ -1188,7 +1188,7 @@ def run():
             failures.append("path containment: a symlink with a missing target was accepted")
         shutil.rmtree(root, ignore_errors=True)
 
-        behaviour += 1
+        behavior += 1
         # An external issue template directory must never be listed.
         root = make_temp_repo()
         template_dir = os.path.join(root, ".github", "ISSUE_TEMPLATE")
@@ -1210,7 +1210,7 @@ def run():
         print(f"  skipped 7 containment symlink case(s): symbolic links are not available here "
               f"({symlink_reason})")
 
-    behaviour += 1
+    behavior += 1
     # The same decisions, reached without a real symbolic link, so they are
     # covered on every platform.
     original_realpath = os.path.realpath
@@ -1250,7 +1250,7 @@ def run():
     shutil.rmtree(outside_root, ignore_errors=True)
 
     # ------------------------------------------------------------------
-    # Behaviour cases: the schema refresh is transactional.
+    # Behavior cases: the schema refresh is transactional.
     # ------------------------------------------------------------------
     good_downloads = {
         name: open(os.path.join(SCHEMA_SOURCE_DIR, name), "rb").read()
@@ -1259,7 +1259,7 @@ def run():
     for name in update_schemas.UPSTREAM_THIRD_PARTY:
         good_downloads[name] = b"placeholder"
 
-    behaviour += 1
+    behavior += 1
     broken = dict(good_downloads)
     broken["github-issue-forms.json"] = b"{ this is not json"
     try:
@@ -1269,7 +1269,7 @@ def run():
     else:
         failures.append("schema refresh: invalid upstream JSON was accepted")
 
-    behaviour += 1
+    behavior += 1
     not_a_schema = dict(good_downloads)
     not_a_schema["github-issue-config.json"] = b'{"type": 12}'
     try:
@@ -1279,7 +1279,7 @@ def run():
     else:
         failures.append("schema refresh: a document that is not a JSON Schema was accepted")
 
-    behaviour += 1
+    behavior += 1
     try:
         update_schemas.build_artifacts({"github-issue-forms.json": b"{}"})
     except update_schemas.UpdateError:
@@ -1287,7 +1287,7 @@ def run():
     else:
         failures.append("schema refresh: a missing download was accepted")
 
-    behaviour += 1
+    behavior += 1
     temp_root = make_temp_repo()
     try:
         artifacts = {"a.json": b'{"a": 1}\n', "b.json": b'{"b": 2}\n'}
@@ -1305,7 +1305,7 @@ def run():
     finally:
         shutil.rmtree(temp_root, ignore_errors=True)
 
-    behaviour += 1
+    behavior += 1
     downloads = {
         name: open(os.path.join(SCHEMA_SOURCE_DIR, name), "rb").read()
         for name in ("github-issue-forms.json", "github-issue-config.json")
@@ -1358,7 +1358,7 @@ def run():
 
     # Failure on the second promotion, and on a later one.
     for fail_at, label in ((2, "the second promotion"), (4, "a subsequent promotion")):
-        behaviour += 1
+        behavior += 1
         temp_root = make_temp_repo()
         try:
             artifacts = {f"f{i}.json": f'{{"v": {i}}}\n'.encode() for i in range(5)}
@@ -1386,7 +1386,7 @@ def run():
 
     # Failure while restoring one backup, and while restoring several.
     for promote_count, label in ((2, "one backup"), (4, "multiple backups")):
-        behaviour += 1
+        behavior += 1
         temp_root = make_temp_repo()
         try:
             artifacts = {f"f{i}.json": f'{{"v": {i}}}\n'.encode() for i in range(5)}
@@ -1465,7 +1465,7 @@ def run():
     # no backup for it and nothing to restore. The failure must be reported
     # as a residual file that is left in place, and never as a recoverable
     # copy, and no reported path may end in "None".
-    behaviour += 1
+    behavior += 1
     import contextlib
     import io as _io
 
@@ -1667,7 +1667,7 @@ def run():
     # but the backup is gone by the time the rollback starts. The original
     # content cannot be restored, and removing the promoted file would not
     # restore it either, so the promoted file must be left in place.
-    behaviour += 1
+    behavior += 1
     import contextlib
     import io as _io
 
@@ -1901,7 +1901,7 @@ def run():
 
     # A failure while removing the backups after a successful promotion is
     # reported but does not fail the promotion.
-    behaviour += 1
+    behavior += 1
     temp_root = make_temp_repo()
     try:
         artifacts = {f"f{i}.json": f'{{"v": {i}}}\n'.encode() for i in range(3)}
@@ -1930,7 +1930,7 @@ def run():
         shutil.rmtree(temp_root, ignore_errors=True)
 
     # A completely successful refresh leaves no temporary or backup files.
-    behaviour += 1
+    behavior += 1
     temp_root = make_temp_repo()
     try:
         artifacts = {f"f{i}.json": f'{{"v": {i}}}\n'.encode() for i in range(3)}
@@ -1954,7 +1954,7 @@ def run():
         shutil.rmtree(temp_root, ignore_errors=True)
 
     # ------------------------------------------------------------------
-    # Behaviour cases: a preserved recovery copy survives a later update.
+    # Behavior cases: a preserved recovery copy survives a later update.
     # ------------------------------------------------------------------
     def transaction_dirs(target_dir):
         root = os.path.join(target_dir, update_schemas.BACKUP_DIR_NAME)
@@ -1994,7 +1994,7 @@ def run():
                     preserved[candidate] = open(candidate, "rb").read()
         return preserved
 
-    behaviour += 1
+    behavior += 1
     # A failed rollback leaves a recovery copy, and a later transaction must not
     # overwrite it.
     temp_root = make_temp_repo()
@@ -2043,7 +2043,7 @@ def run():
     finally:
         shutil.rmtree(temp_root, ignore_errors=True)
 
-    behaviour += 1
+    behavior += 1
     # Two failed transactions keep two independent recovery copies.
     temp_root = make_temp_repo()
     try:
@@ -2073,7 +2073,7 @@ def run():
     finally:
         shutil.rmtree(temp_root, ignore_errors=True)
 
-    behaviour += 1
+    behavior += 1
     # A successful transaction after an earlier failed one leaves the earlier
     # recovery copy alone.
     temp_root = make_temp_repo()
@@ -2110,7 +2110,7 @@ def run():
     finally:
         shutil.rmtree(temp_root, ignore_errors=True)
 
-    behaviour += 1
+    behavior += 1
     # A concurrent refresh is refused while the lock is held.
     temp_root = make_temp_repo()
     try:
@@ -2131,14 +2131,14 @@ def run():
     finally:
         shutil.rmtree(temp_root, ignore_errors=True)
 
-    behaviour += 1
+    behavior += 1
     # A successful promotion with the real nested artifact layout leaves no
     # staging file, restore file, backup file, or empty transaction directory.
     temp_root = make_temp_repo()
     try:
         artifacts = {
             "github-issue-forms.json": b'{"v": 1}\n',
-            "third-party/LICENSE-Apache-2.0.txt": b"licence\n",
+            "third-party/LICENSE-Apache-2.0.txt": b"license\n",
             "third-party/NOTICE-SchemaStore.txt": b"notice\n",
         }
         target_dir = seed_target(temp_root, artifacts, original=b"ORIGINAL\n")
@@ -2169,7 +2169,7 @@ def run():
 
 
     # ------------------------------------------------------------------
-    # Behaviour cases: the schema updater stays inside the repository.
+    # Behavior cases: the schema updater stays inside the repository.
     # ------------------------------------------------------------------
     updater_symlinks = True
     updater_symlink_reason = ""
@@ -2253,7 +2253,7 @@ def run():
             return sorted(os.listdir(outside))
 
         # 1. A schemas directory that points outside the repository.
-        behaviour += 1
+        behavior += 1
         outside = sentinel_tree()
         root = schema_repo()
         try:
@@ -2297,7 +2297,7 @@ def run():
             shutil.rmtree(outside, ignore_errors=True)
 
         # 2. A schemas/third-party directory that points outside the repository.
-        behaviour += 1
+        behavior += 1
         outside = sentinel_tree()
         root = schema_repo()
         try:
@@ -2330,7 +2330,7 @@ def run():
             shutil.rmtree(outside, ignore_errors=True)
 
         # 3. A backup directory that points outside the repository.
-        behaviour += 1
+        behavior += 1
         outside = sentinel_tree()
         root = schema_repo()
         try:
@@ -2361,7 +2361,7 @@ def run():
             shutil.rmtree(outside, ignore_errors=True)
 
         # 4. An artifact target that is itself a symbolic link pointing outside.
-        behaviour += 1
+        behavior += 1
         outside = sentinel_tree()
         root = schema_repo()
         try:
@@ -2396,7 +2396,7 @@ def run():
             shutil.rmtree(outside, ignore_errors=True)
 
         # 5. An internal symbolic link is still handled consistently.
-        behaviour += 1
+        behavior += 1
         root = schema_repo()
         try:
             target_dir = os.path.join(root, "schemas")
@@ -2424,12 +2424,12 @@ def run():
               f"({updater_symlink_reason})")
 
     # ------------------------------------------------------------------
-    # Behaviour case: a failed rollback is reported as such.
+    # Behavior case: a failed rollback is reported as such.
     # ------------------------------------------------------------------
     import contextlib
     import io as _io
 
-    behaviour += 1
+    behavior += 1
     original_refresh = update_schemas.refresh
 
     def failing_refresh():
@@ -2485,12 +2485,12 @@ def run():
             f"schema updater: the generic handler claimed that nothing changed: {stderr_text!r}"
         )
 
-    checked = negative + positive + behaviour
+    checked = negative + positive + behavior
     applicable = checked + skipped
     total = checked
     print(
         f"validate_docs tests: {negative} negative case(s), {positive} positive control(s), "
-        f"and {behaviour} behaviour case(s) checked ({checked} checked, {skipped} skipped, "
+        f"and {behavior} behavior case(s) checked ({checked} checked, {skipped} skipped, "
         f"{applicable} applicable)"
     )
     if failures:

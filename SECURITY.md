@@ -42,7 +42,7 @@ The report opens a private advisory that only you and the maintainers can see. Y
 
 - GitHub's private vulnerability reporting interface is available for **public repositories** in which it has been enabled. It is not available for private or internal repositories through the web interface.
 - The feature is enabled **per repository** by an owner, maintainer, or administrator. It is not enabled organization-wide by default.
-- The private report form for this organization is [`.github/VULNERABILITY_REPORT.yml`](.github/VULNERABILITY_REPORT.yml). It is used where private reporting has been enabled, and a repository may replace it with its own form. **The form does not enable the feature** — it only customises the questions asked once the feature is already enabled for that repository.
+- The private report form for this organization is [`.github/VULNERABILITY_REPORT.yml`](.github/VULNERABILITY_REPORT.yml). It is used where private reporting has been enabled, and a repository may replace it with its own form. **The form does not enable the feature** — it only customizes the questions asked once the feature is already enabled for that repository.
 
 If the **Report a vulnerability** option is not present on a repository, use one of the alternatives below. This policy does not promise that the option is available in any given repository.
 
@@ -123,7 +123,7 @@ The goal is a fix that is available before the details are public.
 
 **NaaB Tech asks that the details of a vulnerability are not made public until a disclosure timeline has been agreed.** This is a request for coordination, not a legal claim about what a reporter is required to do. Publishing a proof of concept prematurely exposes every user of the affected software and hands attackers a ready-made tool, which is why the request is made.
 
-If you believe a coordinated timeline is not being honoured, contact the organization through the [official website](https://naabtech.ir) or [info@naabtech.ir](mailto:info@naabtech.ir) and ask for escalation.
+If you believe a coordinated timeline is not being honored, contact the organization through the [official website](https://naabtech.ir) or [info@naabtech.ir](mailto:info@naabtech.ir) and ask for escalation.
 
 ---
 
@@ -162,15 +162,15 @@ Where authorization does exist, the following are outside it:
 - Scanning, probing, or testing systems that are not named in the authorization.
 - Continuing to test after a report has been filed and remediation work has begun.
 
-### No safe-harbour commitment
+### No safe-harbor commitment
 
 This policy does not grant permission to test any system, and it does not promise legal protection for testing that was not authorized.
 
 - Reporting a vulnerability is the only activity this policy authorizes.
-- NaaB Tech has not adopted a safe-harbour, immunity, or indemnification provision. A researcher who tests a system without the owner's authorization may be exposed to legal risk, and nothing in this document waives any right or remedy available to the owner of a system.
+- NaaB Tech has not adopted a safe-harbor, immunity, or indemnification provision. A researcher who tests a system without the owner's authorization may be exposed to legal risk, and nothing in this document waives any right or remedy available to the owner of a system.
 - NaaB Tech will not make public accusations against a researcher who acts in good faith and reports findings through the routes described above. That is a statement about how reports are handled, not a legal guarantee.
 
-> **Owner decision.** A safe-harbour provision can be added to this policy. Before it is published it should be drafted and approved by the organization owners and reviewed by legal counsel, and it should name the assets it covers. This policy deliberately does not define an in-scope asset list, because doing so would imply that those assets are authorized for testing.
+> **Owner decision.** A safe-harbor provision can be added to this policy. Before it is published it should be drafted and approved by the organization owners and reviewed by legal counsel, and it should name the assets it covers. This policy deliberately does not define an in-scope asset list, because doing so would imply that those assets are authorized for testing.
 
 There is no bug bounty program. Participation is voluntary and unpaid.
 
