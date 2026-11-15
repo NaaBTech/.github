@@ -33,47 +33,49 @@ Nothing here is application code. It is documentation and configuration, maintai
 ## Repository Layout
 
 ```text
+profile/
+└── README.md                            # Organization profile
 .github/
-├── profile/
-│   └── README.md                      # Organization profile
-├── .github/
-│   ├── ISSUE_TEMPLATE/
-│   │   ├── bug_report.yml             # Default issue form: bug report
-│   │   ├── feature_request.yml        # Default issue form: feature request
-│   │   ├── question.yml               # Default issue form: question
-│   │   └── config.yml                 # Default issue template chooser
-│   ├── VULNERABILITY_REPORT.yml       # Default private vulnerability report form
-│   └── workflows/
-│       └── validate-docs.yml          # Validation workflow for this repository
-├── CODE_OF_CONDUCT.md                 # Default code of conduct
-├── CONTRIBUTING.md                    # Default contribution guidelines
-├── PULL_REQUEST_TEMPLATE.md           # Default pull request template
-├── SECURITY.md                        # Default security policy
-├── SUPPORT.md                         # Default support guidance
-├── README.md                          # This file
-├── REPOSITORY_ONBOARDING.md           # Repository setup and maintenance checklist
-├── schemas/
-│   ├── github-issue-forms.json        # Vendored JSON Schema for issue forms
-│   ├── github-issue-config.json       # Vendored JSON Schema for the chooser
-│   ├── github-vulnerability-report-form.json
-│   │                                   # Derived schema for vulnerability forms
-│   ├── PROVENANCE.json                # Where each schema came from, and when
-│   ├── README.md                      # Schema sources, licensing, and maintenance
-│   └── third-party/
-│       ├── LICENSE-Apache-2.0.txt     # License text covering the vendored schemas
-│       └── NOTICE-SchemaStore.txt     # Upstream notice attribution
-├── scripts/
-│   ├── validate_docs.py               # File, form, and link validation
-│   ├── test_validate_docs.py          # Validator tests: negative cases and positive controls
-│   └── update_schemas.py              # Refreshes the vendored schemas
-├── .gitattributes                     # Normalizes line endings to LF
-├── .gitignore                         # Ignores Python bytecode and node_modules
-├── .markdownlint.json                 # markdownlint configuration
-├── .markdownlintignore                # Paths excluded from markdownlint
-├── .yamllint.yml                      # yamllint configuration
-├── package.json                       # Node tooling declaration
-├── package-lock.json                  # Pinned Node dependency tree
-└── requirements-docs.txt              # Pinned Python tooling
+├── ISSUE_TEMPLATE/
+│   ├── bug_report.yml                   # Default issue form: bug report
+│   ├── feature_request.yml              # Default issue form: feature request
+│   ├── question.yml                     # Default issue form: question
+│   └── config.yml                       # Default issue template chooser
+├── VULNERABILITY_REPORT.yml             # Default private vulnerability report form
+└── workflows/
+    └── validate-docs.yml                # Validation workflow for this repository
+CODE_OF_CONDUCT.md                       # Default code of conduct
+CONTRIBUTING.md                          # Default contribution guidelines
+LICENSE                                  # License for this repository's own contents
+PULL_REQUEST_TEMPLATE.md                 # Default pull request template
+README.md                                # This file
+REPOSITORY_ONBOARDING.md                 # Repository setup and maintenance checklist
+SECURITY.md                              # Default security policy
+SUPPORT.md                               # Default support guidance
+schemas/
+├── github-issue-forms.json              # Vendored JSON Schema for issue forms
+├── github-issue-config.json             # Vendored JSON Schema for the chooser
+├── github-vulnerability-report-form.json
+│                                         # Derived schema for vulnerability forms
+├── PROVENANCE.json                      # Where each schema came from, and when
+├── README.md                            # Schema sources, licensing, and maintenance
+└── third-party/
+    ├── LICENSE-Apache-2.0.txt           # License text covering the vendored schemas
+    └── NOTICE-SchemaStore.txt           # Upstream notice attribution
+scripts/
+├── validate_docs.py                     # File, form, link, and layout validation
+├── test_validate_docs.py                # Validator tests: negative cases and positive controls
+└── update_schemas.py                    # Refreshes the vendored schemas
+.codespellrc                              # codespell configuration
+ruff.toml                                 # ruff configuration
+.gitattributes                            # Normalizes line endings to LF
+.gitignore                                # Ignores Python bytecode and node_modules
+.markdownlint.json                       # markdownlint configuration
+.markdownlintignore                      # Paths excluded from markdownlint
+.yamllint.yml                             # yamllint configuration
+package.json                              # Node tooling declaration
+package-lock.json                         # Pinned Node dependency tree
+requirements-docs.txt                     # Pinned Python tooling
 ```
 
 ### Which files are inherited
@@ -182,7 +184,7 @@ Copyright 2026 NaaB Tech. Changing this license requires the owners' approval an
 - **No unapproved legal commitments.** Safe-harbor provisions, immunity, indemnification, response-time guarantees, and bug bounty terms are business and legal decisions. They require the organization owners' approval and, where appropriate, legal review before they are written into these files.
 - **Repository-specific rules win.** A default must stay general enough to apply across different technologies. Anything that only makes sense for one repository belongs in that repository.
 - **Change discipline.** Changes to these files follow the conventions in [`CONTRIBUTING.md`](CONTRIBUTING.md), including the branch naming and commit message conventions described there.
-- **Validate before merging.** The `Validate documentation` workflow checks YAML syntax, spelling, the GitHub form schemas, required file naming, and internal links on every pull request. The validation itself reads only files in this repository, so a third-party website outage cannot fail a documentation change. Installing the tooling still needs access to the Python and npm package registries, so a registry outage can prevent the workflow from completing setup. Run the same checks locally:
+- **Validate before merging.** The `Validate documentation` workflow checks YAML syntax, spelling, the Python scripts, the GitHub form schemas, required file naming, internal links, and the layout tree in this file on every pull request. The validation itself reads only files in this repository, so a third-party website outage cannot fail a documentation change. Installing the tooling still needs access to the Python and npm package registries, so a registry outage can prevent the workflow from completing setup. Run the same checks locally:
 
   ```bash
   python -m pip install --requirement requirements-docs.txt
@@ -190,6 +192,7 @@ Copyright 2026 NaaB Tech. Changing this license requires the owners' approval an
   python scripts/validate_docs.py .
   python scripts/test_validate_docs.py
   codespell --check-hidden
+  ruff check scripts/
   yamllint --strict --config-file .yamllint.yml .
   npx --no-install markdownlint --config .markdownlint.json "**/*.md"
   ```

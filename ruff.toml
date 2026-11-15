@@ -1,0 +1,12 @@
+# Ruff configuration for the Python scripts in this repository.
+#
+# The rule set is the standard error, warning and bugbear checks, together with
+# the simplifications and the Python-version upgrades that do not change
+# behavior. The line length is 100 characters, which leaves room for the long
+# error messages the validator produces.
+
+line-length = 100
+target-version = "py313"
+
+[lint]
+select = ["E", "F", "W", "B", "UP", "SIM"]

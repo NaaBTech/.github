@@ -27,16 +27,16 @@ import urllib.parse
 
 try:
     import yaml
-except ImportError:  # pragma: no cover
+except ImportError as exc:  # pragma: no cover
     sys.stderr.write("PyYAML is required: pip install -r requirements-docs.txt\n")
-    raise SystemExit(2)
+    raise SystemExit(2) from exc
 
 try:
     from jsonschema import Draft7Validator
     from jsonschema.validators import validator_for
-except ImportError:  # pragma: no cover
+except ImportError as exc:  # pragma: no cover
     sys.stderr.write("jsonschema is required: pip install -r requirements-docs.txt\n")
-    raise SystemExit(2)
+    raise SystemExit(2) from exc
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
@@ -132,7 +132,7 @@ def load_schema(root, relative):
     try:
         schema_validator(schema).check_schema(schema)
     except Exception as exc:  # noqa: BLE001
-        raise SystemExit(f"{relative} is not a valid JSON Schema: {exc}")
+        raise SystemExit(f"{relative} is not a valid JSON Schema: {exc}") from exc
     return schema
 
 
@@ -148,7 +148,6 @@ def load_schemas(root):
         "vulnerability_form": load_schema(root, "schemas/github-vulnerability-report-form.json"),
         "issue_config": load_schema(root, "schemas/github-issue-config.json"),
     }
-
 
 
 # --------------------------------------------------------------------------
@@ -181,6 +180,8 @@ REQUIRED_TOOLING_FILES = {
     ".markdownlint.json": "markdownlint configuration",
     ".markdownlintignore": "markdownlint exclusions",
     ".yamllint.yml": "yamllint configuration",
+    ".codespellrc": "codespell configuration",
+    "ruff.toml": "ruff configuration",
     "package.json": "Node tooling declaration",
     "package-lock.json": "pinned Node dependency tree",
     "requirements-docs.txt": "pinned Python tooling",
@@ -188,8 +189,12 @@ REQUIRED_TOOLING_FILES = {
     "schemas/github-issue-config.json": "vendored chooser schema",
     "schemas/github-vulnerability-report-form.json": "derived vulnerability form schema",
     "schemas/PROVENANCE.json": "schema provenance record",
-    "schemas/third-party/LICENSE-Apache-2.0.txt": "Apache-2.0 license text for the vendored schemas",
-    "schemas/third-party/NOTICE-SchemaStore.txt": "upstream NOTICE attribution for the vendored schemas",
+    "schemas/third-party/LICENSE-Apache-2.0.txt": (
+        "Apache-2.0 license text for the vendored schemas"
+    ),
+    "schemas/third-party/NOTICE-SchemaStore.txt": (
+        "upstream NOTICE attribution for the vendored schemas"
+    ),
     "scripts/validate_docs.py": "documentation validator",
     "scripts/test_validate_docs.py": "validator tests",
     "scripts/update_schemas.py": "schema refresh tool",
@@ -253,7 +258,7 @@ def _construct_unique_mapping(loader, node, deep=False):
         key = loader.construct_object(key_node, deep=deep)
         try:
             duplicate = key in mapping
-        except TypeError:
+        except TypeError as exc:
             # An unhashable key cannot be stored in a mapping. PyYAML raises a
             # bare TypeError for this; it is turned into a normal YAML error
             # so that the validator reports the problem instead of crashing.
@@ -262,7 +267,7 @@ def _construct_unique_mapping(loader, node, deep=False):
                 node.start_mark,
                 f"found unhashable key of type {type(key).__name__}",
                 key_node.start_mark,
-            )
+            ) from exc
         if duplicate:
             raise yaml.constructor.ConstructorError(
                 "while constructing a mapping",
@@ -308,10 +313,11 @@ def boolean_key_errors(name, data):
 
     def walk(node, trail):
         if isinstance(node, dict):
-            for key in node.keys():
+            for key in node:
                 if isinstance(key, bool) or (isinstance(key, str) and key in BOOLEAN_KEY_NAMES):
                     errors.append(
-                        f"{trail}.{key!r}: key is parsed as a boolean by YAML and is rejected by GitHub"
+                        f"{trail}.{key!r}: key is parsed as a boolean by YAML "
+                        "and is rejected by GitHub"
                     )
                 walk(node[key], f"{trail}.{key!r}")
         elif isinstance(node, list):
@@ -414,7 +420,10 @@ def form_rule_errors(name, data, expected_labels=None):
                     if lowered == "none":
                         errors.append(f"{where}: options must not include the reserved word 'none'")
                     if lowered in BOOLEAN_LIKE:
-                        errors.append(f"{where}: option '{text}' is parsed as a boolean by YAML; quote it")
+                        errors.append(
+                            f"{where}: option '{text}' is parsed as a boolean "
+                            "by YAML; quote it"
+                        )
 
     if len(set(ids)) != len(ids):
         errors.append(f"{name}: body ids are not unique: {ids}")
@@ -456,7 +465,10 @@ def validate_config_document(name, data, schema):
                     )
                 about = link.get("about")
                 if isinstance(about, str) and len(about) > 1024:
-                    errors.append(f"{name}: contact_links[{index}]: 'about' must be 1024 characters or fewer")
+                        errors.append(
+                            f"{name}: contact_links[{index}]: 'about' must be "
+                            "1024 characters or fewer"
+                        )
     return errors
 
 
@@ -528,14 +540,14 @@ def headings(path):
 
 
 # Directories that are never part of the validated content.
-EXCLUDED_DIRECTORIES = {".git", "node_modules", "__pycache__"}
+EXCLUDED_DIRECTORIES = {".git", "node_modules", "__pycache__", ".ruff_cache"}
 
 # Working directories used by scripts/update_schemas.py: the staging area and
 # the per-transaction backup directories.
 EXCLUDED_DIRECTORY_PREFIXES = (".staging-", ".naabtech-")
 
 
-def repo_files(root, suffixes):
+def repo_files(root, suffixes=None):
     """Enumerate files for validation, rejecting anything outside the repository.
 
     A symbolic link whose canonical destination is outside the repository is
@@ -582,11 +594,84 @@ def repo_files(root, suffixes):
                     continue
                 walk(resolved, chain, shown)
                 continue
-            if name.endswith(suffixes):
+            if suffixes is None or name.endswith(suffixes):
                 found.append((resolved, relative))
 
     walk(root, frozenset(), "")
     return sorted(found, key=lambda item: item[1]), sorted(set(rejected))
+
+
+# A layout tree is written with box-drawing characters. Only a fenced
+# block that contains them is treated as a tree.
+TREE_MARKER = re.compile(r"[\u251c\u2514]\u2500\u2500 ")
+
+
+def parse_layout_tree(text):
+    """Return the paths that a tree diagram describes.
+
+    The paths are reconstructed from the indentation. A line that is only a
+    comment continues the entry above it and is not a path of its own.
+    """
+    paths = set()
+    stack = []
+    for raw in text.split("\n"):
+        if not raw.strip():
+            continue
+        marker = TREE_MARKER.search(raw)
+        if marker is None:
+            stripped = raw.strip()
+            if stripped.startswith("\u2502"):
+                continue
+            name_start = len(raw) - len(raw.lstrip())
+            rest = raw[name_start:].strip()
+        else:
+            name_start = marker.end()
+            rest = raw[name_start:].strip()
+        if not rest or rest.startswith("#"):
+            continue
+        depth = name_start // 4
+        name = rest.split("  #")[0].strip().rstrip("/")
+        if not name:
+            continue
+        stack = [entry for entry in stack if entry[0] < depth]
+        parent = "".join(entry[1] + "/" for entry in stack)
+        paths.add((parent + name).rstrip("/"))
+        stack.append((depth, name))
+    return paths
+
+
+def layout_errors(root, markdown_files):
+    """Check the layout tree in the repository README against the real layout.
+
+    A file that was added, renamed or removed without the tree being updated
+    is reported, so that the map of the repository cannot silently rot.
+    """
+    errors = []
+    readme = markdown_files.get("README.md")
+    if readme is None:
+        return errors
+    with open(readme, encoding="utf-8") as handle:
+        text = handle.read()
+    described = set()
+    for block in re.findall(r"```text\n(.*?)```", text, re.S):
+        if "\u251c\u2500\u2500 " not in block and "\u2514\u2500\u2500 " not in block:
+            continue
+        described |= parse_layout_tree(block)
+    if not described:
+        return errors
+
+    files = {name for _path, name in repo_files(root, None)[0]}
+    directories = set()
+    for name in files:
+        parts = name.split("/")
+        for index in range(1, len(parts)):
+            directories.add("/".join(parts[:index]))
+
+    for name in sorted(files - described):
+        errors.append(f"README.md: the layout tree does not list {name}")
+    for name in sorted(described - files - directories):
+        errors.append(f"README.md: the layout tree lists {name}, which does not exist")
+    return errors
 
 
 def required_file_status(root, relative):
@@ -719,8 +804,6 @@ def run_checks(root):
         markdown_files[name] = path
     for name, reason in sorted(rejected.items()):
         errors.append(f"{name}: was not validated because the file {reason}")
-    linked = set()
-
     validated_forms = set()
 
     template_status, template_dir = resolve_repository_path(root, ".github/ISSUE_TEMPLATE")
@@ -801,6 +884,8 @@ def run_checks(root):
             f"label '{label}' is declared for the organization forms but no form applies it"
         )
 
+    errors.extend(layout_errors(root, markdown_files))
+
     linked = set()
     for name, path in markdown_files.items():
         with open(path, encoding="utf-8") as handle:
@@ -823,13 +908,22 @@ def run_checks(root):
                 )
                 continue
             if not os.path.exists(resolved):
-                errors.append(f"{name}: link '{raw_target}' points to '{target}', which does not exist")
+                errors.append(
+                    f"{name}: link '{raw_target}' points to '{target}', "
+                    "which does not exist"
+                )
                 continue
             if anchor:
                 if target not in markdown_files:
-                    errors.append(f"{name}: link '{raw_target}' has an anchor but '{target}' is not a Markdown file")
+                    errors.append(
+                        f"{name}: link '{raw_target}' has an anchor but "
+                        "'{target}' is not a Markdown file"
+                    )
                 elif anchor not in headings(markdown_files[target]):
-                    errors.append(f"{name}: link '{raw_target}' points to an anchor that does not exist in '{target}'")
+                    errors.append(
+                        f"{name}: link '{raw_target}' points to an anchor "
+                        "that does not exist in '{target}'"
+                    )
 
     # Markdown that nothing links to is hard to find. The organization profile
     # README is linked from the repository root, so only documents below the
@@ -860,7 +954,6 @@ def main():
 # The default repository's schemas, for direct use by the test suite. They are
 # loaded after every function is defined, because the containment helpers
 # they rely on are declared further down the module.
-# The default repository's schemas, for direct use by the test suite.
 ISSUE_FORM_SCHEMA = load_schema(ROOT, "schemas/github-issue-forms.json")
 VULNERABILITY_FORM_SCHEMA = load_schema(ROOT, "schemas/github-vulnerability-report-form.json")
 ISSUE_CONFIG_SCHEMA = load_schema(ROOT, "schemas/github-issue-config.json")

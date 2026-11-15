@@ -171,6 +171,6 @@ PY
 
 - The schemas describe the **structure** of a form. They do not describe whether the content is sensible, and they cannot detect a form that GitHub accepts but that is awkward for a reporter.
 - `additionalProperties: false` in the upstream schema means unknown top-level keys and unknown attributes are rejected. If GitHub adds a new attribute, the upstream schema will need to catch up before this repository accepts it.
-- The organization-specific rules that SchemaStore knows nothing about — the expected labels, the required file names, the internal links — are checked separately by `scripts/validate_docs.py`.
+- The organization-specific rules that SchemaStore knows nothing about — the expected labels, the required file names, the internal links, the layout tree in the repository README — are checked separately by `scripts/validate_docs.py`.
 - `scripts/validate_docs.py` checks each vendored schema against the JSON Schema meta-schema for the dialect it declares, so a file that parses as JSON but is not a valid schema is rejected rather than used.
 - The Apache-2.0 conditions are recorded here as a plain reading of the license. Whether the distribution satisfies them in full is for the repository owners and their legal advisors to confirm.
