@@ -54,6 +54,7 @@ A committed file is the durable choice — it travels with the repository and is
 - [ ] **Vulnerability report form** — the organization default is inherited for public repositories with private reporting enabled. A project may add its own `.github/VULNERABILITY_REPORT.yml`.
 - [ ] **Dependency security** — the dependency graph, Dependabot alerts, and Dependabot security updates. These are repository settings and are enabled per repository.
 - [ ] **Secret protection** — secret scanning and push protection, where the plan supports them. Both are repository settings.
+- [ ] **Secrets** — no credential is committed. A committed configuration file holds placeholders, and the real values live in a file that is ignored, such as `.env.local`. A value that was committed stays in the history, so it has to be rotated, not just removed.
 - [ ] **Code scanning** — where supported and appropriate for the language in use. A default analysis setup is a reasonable starting point; CodeQL is not relevant to every project.
 - [ ] **Security contact** — until a dedicated security address exists, `info@naabtech.ir` is the fallback route, and reports must be marked clearly in the subject line. Record the route in the repository's `SECURITY.md` if it differs.
 - [ ] **Access** — the smallest team that can maintain the repository, and no stale accounts with write access.
@@ -88,7 +89,7 @@ Reference: [Creating a custom security configuration](https://docs.github.com/en
 
 ## 4. Development Workflow
 
-- [ ] **Branch protection or rulesets** — on the default branch, requiring review before merge, and blocking force pushes and branch deletion. Rulesets are preferred where available because they can be configured at the organization level.
+- [ ] **Branch protection or rulesets** — on the default branch, requiring review before merge, and blocking force pushes and branch deletion. Rulesets are preferred where available because they can be configured at the organization level. Both features depend on the plan: on GitHub Free they cover public repositories only, so a private repository needs a plan that includes it.
 - [ ] **Review requirements** — a second approval for changes that touch authentication, authorization, cryptography, or deployment configuration. A required review needs at least two people who can approve, so it is only worth turning on once a second reviewer exists; until then it would block every merge.
 - [ ] **Continuous integration** — a workflow under `.github/workflows/` that builds and tests the project on every pull request.
 - [ ] **Automated tests** — the test suite runs in CI, and a failing test fails the build.
