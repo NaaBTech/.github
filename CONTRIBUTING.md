@@ -73,6 +73,7 @@ Create a focused branch from the default branch. If you do not have write access
 | `docs/` | Documentation only |
 | `refactor/` | A change to internal structure with no behavior change |
 | `chore/` | Maintenance that changes no behavior, such as a license, a dependency update, or a spelling fix |
+| `ci/` | A change to the continuous integration configuration |
 | `security/` | A security improvement or hardening change |
 
 Examples:
@@ -83,6 +84,7 @@ fix/incorrect-timezone-handling
 docs/deployment-guide
 refactor/extract-request-parser
 chore/update-pinned-tooling
+ci/add-site-checks
 security/tighten-request-body-limits
 ```
 
