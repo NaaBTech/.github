@@ -38,6 +38,23 @@ jobs:
           # the token does not need to be persisted in the local git config.
           persist-credentials: false
 
+      - name: Install gitleaks
+        run: |
+          set -euo pipefail
+          version="8.30.1"
+          archive="gitleaks_${version}_linux_x64.tar.gz"
+          curl --fail --silent --show-error --location \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${version}/${archive}" \
+            --output "/tmp/${archive}"
+          echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  /tmp/${archive}" | sha256sum --check --strict
+          tar --extract --gzip --file "/tmp/${archive}" --directory /usr/local/bin gitleaks
+          gitleaks version
+
+      - name: Scan the committed files for secrets
+        # The files that are committed are scanned. The values are redacted, so
+        # a finding never puts a credential into the log.
+        run: gitleaks detect --source . --no-git --redact --no-banner --verbose
+
       - name: Set up Python
         uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
         with:

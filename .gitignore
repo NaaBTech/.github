@@ -15,3 +15,22 @@ node_modules/
 schemas/.naabtech-backups/
 schemas/.naabtech-update.lock
 schemas/.staging-*/
+
+# Environment files and local credentials. The committed .env holds safe
+# defaults and the committed .env.example is a template; everything else
+# carries local values and is never committed.
+.env.local
+.env.local.php
+.env.*.local
+.env.dev
+.env.prod
+.env.production
+.env.staging
+# Private keys and local credential files.
+*.pem
+*.key
+*.p12
+*.pfx
+id_rsa
+id_ed25519
+.secrets/

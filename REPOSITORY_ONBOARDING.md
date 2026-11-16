@@ -152,6 +152,12 @@ Reference: [Sharing actions and workflows with your organization](https://docs.g
 
 ---
 
+## The proposals that are waiting for a decision
+
+Three documents are prepared and are not in effect. They are listed in the [repository README](README.md#security-baseline): a proposed organization profile, a factual review of the license, and the checklist for the launch of the main website. A responsible-testing and safe-harbor draft is prepared as well and is held with the security review, because a draft that grants no permission has no value in public and could be read as a permission the organization never gave.
+
+---
+
 ## Verifying the Result
 
 After onboarding, confirm on the repository itself:

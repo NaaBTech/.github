@@ -1,0 +1,15 @@
+title = "NaaB Tech organization defaults"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "The known false positives of this repository."
+paths = [
+  # The git directory holds the objects of the repository, not content.
+  '''(^|/)\.git(/|$)''',
+  # The local override files hold values by design and are never
+  # committed, so they are not part of what is scanned.
+  '''(^|/)\.env(\.[^/]*)?\.local$''',
+  '''(^|/)\.env\.local$''',
+]

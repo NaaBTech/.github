@@ -57,7 +57,7 @@ schemas/
 ├── github-issue-forms.json              # Vendored JSON Schema for issue forms
 ├── github-issue-config.json             # Vendored JSON Schema for the chooser
 ├── github-vulnerability-report-form.json
-│                                        # Derived schema for vulnerability forms
+│                                         # Derived schema for vulnerability forms
 ├── PROVENANCE.json                      # Where each schema came from, and when
 ├── README.md                            # Schema sources, licensing, and maintenance
 └── third-party/
@@ -67,16 +67,21 @@ scripts/
 ├── validate_docs.py                     # File, form, link, and layout validation
 ├── test_validate_docs.py                # Validator tests: negative cases and positive controls
 └── update_schemas.py                    # Refreshes the vendored schemas
-.codespellrc                             # codespell configuration
-ruff.toml                                # ruff configuration
-.gitattributes                           # Normalizes line endings to LF
-.gitignore                               # Ignores Python bytecode and node_modules
+drafts/
+├── LICENSE-REVIEW.md                    # A factual review of the license
+├── ORGANIZATION-PROFILE-DRAFT.md        # A proposed organization profile
+└── WEBSITE-LAUNCH-CHECKLIST.md          # What changes at the website launch
+.codespellrc                              # codespell configuration
+ruff.toml                                 # ruff configuration
+.gitleaks.toml                            # Secret scanning configuration
+.gitattributes                            # Normalizes line endings to LF
+.gitignore                                # Ignores Python bytecode and node_modules
 .markdownlint.json                       # markdownlint configuration
 .markdownlintignore                      # Paths excluded from markdownlint
-.yamllint.yml                            # yamllint configuration
-package.json                             # Node tooling declaration
-package-lock.json                        # Pinned Node dependency tree
-requirements-docs.txt                    # Pinned Python tooling
+.yamllint.yml                             # yamllint configuration
+package.json                              # Node tooling declaration
+package-lock.json                         # Pinned Node dependency tree
+requirements-docs.txt                     # Pinned Python tooling
 ```
 
 ### Which files are inherited
@@ -174,6 +179,20 @@ GitHub does not use an organization's `.github` repository as the source of a de
 - **The upstream NOTICE is reproduced unchanged.** Apache-2.0 section 4(d) requires it to be redistributed as received, so it is never edited.
 
 Copyright 2026 NaaB Tech. Changing this license requires the owners' approval and, where appropriate, legal review.
+
+---
+
+## Security Baseline
+
+The organization defaults are scanned for committed secrets on every pull request, with [gitleaks](https://github.com/gitleaks/gitleaks) pinned to one version and its checksum verified. The configuration is in [`.gitleaks.toml`](.gitleaks.toml), and the known false positives of these files are listed there with the reason for each.
+
+Three documents in [`drafts/`](drafts) are proposals for the organization owners. They are not in effect, and they do not change the security policy.
+
+| Draft | What it covers |
+| --- | --- |
+| [`drafts/ORGANIZATION-PROFILE-DRAFT.md`](drafts/ORGANIZATION-PROFILE-DRAFT.md) | The organization profile, which invites the reader to public repositories that do not hold the products |
+| [`drafts/LICENSE-REVIEW.md`](drafts/LICENSE-REVIEW.md) | A factual review of the Apache-2.0 decision, and what still needs a qualified legal review |
+| [`drafts/WEBSITE-LAUNCH-CHECKLIST.md`](drafts/WEBSITE-LAUNCH-CHECKLIST.md) | What has to change when the main website is published |
 
 ---
 
