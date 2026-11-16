@@ -1,0 +1,20 @@
+# The pinned dependencies are kept current by Dependabot. The versions are
+# pinned so that a local run and the CI run use the same ones, so an update
+# is reviewed like any other change rather than merged blindly.
+version: 2
+
+updates:
+  - package-ecosystem: pip
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "build"
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "build"
