@@ -36,6 +36,7 @@ Nothing here is application code. It is documentation and configuration, maintai
 profile/
 └── README.md                            # Organization profile
 .github/
+├── dependabot.yml                       # Dependency update schedules
 ├── ISSUE_TEMPLATE/
 │   ├── bug_report.yml                   # Default issue form: bug report
 │   ├── feature_request.yml              # Default issue form: feature request
