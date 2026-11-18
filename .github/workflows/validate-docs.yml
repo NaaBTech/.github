@@ -5,6 +5,10 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
+  schedule:
+    # Weekly full-history scan, Monday 04:00 UTC.
+    - cron: '0 4 * * 1'
 
 # The workflow only reads this repository. It needs no write access and no secrets.
 permissions:
@@ -25,6 +29,7 @@ concurrency:
 # on: workflow_call, so other repositories cannot call it. Making it reusable
 # would require deliberate adaptation, because it validates this repository's
 # own files and assumes their paths exist. See REPOSITORY_ONBOARDING.md.
+
 jobs:
   validate:
     name: Validate documentation
@@ -37,6 +42,7 @@ jobs:
           # Nothing in this workflow pushes, commits, or talks to the API, so
           # the token does not need to be persisted in the local git config.
           persist-credentials: false
+          fetch-depth: 0
 
       - name: Install gitleaks
         run: |
@@ -54,6 +60,30 @@ jobs:
         # The files that are committed are scanned. The values are redacted, so
         # a finding never puts a credential into the log.
         run: gitleaks detect --source . --no-git --redact --no-banner --verbose
+
+      - name: Scan the commits of a pull request
+        if: github.event_name == 'pull_request'
+        run: |
+          set -euo pipefail
+          base="${{ github.event.pull_request.base.sha }}"
+          head="${{ github.event.pull_request.head.sha }}"
+          gitleaks git --redact --no-banner --log-opts "${base}..${head}" --verbose
+
+      - name: Scan the commits of a push
+        if: github.event_name == 'push'
+        run: |
+          set -euo pipefail
+          before="${{ github.event.before }}"
+          after="${{ github.event.after }}"
+          if [ "$before" = "0000000000000000000000000000000000000000" ]; then
+            gitleaks git --redact --no-banner --log-opts "--all" --verbose
+          else
+            gitleaks git --redact --no-banner --log-opts "${before}..${after}" --verbose
+          fi
+
+      - name: Scan the full reachable history
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        run: gitleaks git --redact --no-banner --log-opts "--all" --verbose
 
       - name: Set up Python
         uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
