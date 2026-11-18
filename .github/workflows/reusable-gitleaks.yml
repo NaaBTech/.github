@@ -1,0 +1,35 @@
+name: Secret scanning
+
+on:
+  workflow_call:
+
+# The reusable workflow only reads the caller repository.
+permissions:
+  contents: read
+
+jobs:
+  gitleaks:
+    name: Gitleaks scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Install gitleaks
+        run: |
+          set -euo pipefail
+          version="8.30.1"
+          archive="gitleaks_${version}_linux_x64.tar.gz"
+          curl --fail --silent --show-error --location \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${version}/${archive}" \
+            --output "/tmp/${archive}"
+          echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  /tmp/${archive}" | sha256sum --check --strict
+          tar --extract --gzip --file "/tmp/${archive}" --directory /usr/local/bin gitleaks
+          gitleaks version
+
+      - name: Scan the committed files for secrets
+        run: gitleaks detect --source . --no-git --redact --no-banner --verbose

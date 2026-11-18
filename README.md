@@ -1,5 +1,8 @@
 # NaaB Tech — Organization Resources
 
+[![Validate documentation](https://github.com/NaaBTech/.github/actions/workflows/validate-docs.yml/badge.svg)](https://github.com/NaaBTech/.github/actions/workflows/validate-docs.yml)
+[![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+
 This repository holds the organization-wide resources for the [NaaB Tech](https://github.com/NaaBTech) GitHub organization:
 
 - The **organization profile** shown on [github.com/NaaBTech](https://github.com/NaaBTech).
@@ -44,6 +47,7 @@ profile/
 │   └── config.yml                       # Default issue template chooser
 ├── VULNERABILITY_REPORT.yml             # Default private vulnerability report form
 └── workflows/
+    ├── reusable-gitleaks.yml            # Reusable secret scanning workflow
     └── validate-docs.yml                # Validation workflow for this repository
 CODE_OF_CONDUCT.md                       # Default code of conduct
 CONTRIBUTING.md                          # Default contribution guidelines
@@ -66,7 +70,8 @@ schemas/
 scripts/
 ├── validate_docs.py                     # File, form, link, and layout validation
 ├── test_validate_docs.py                # Validator tests: negative cases and positive controls
-└── update_schemas.py                    # Refreshes the vendored schemas
+├── update_schemas.py                    # Refreshes the vendored schemas
+└── sync_labels.py                       # Label synchronization tool
 drafts/
 ├── LICENSE-REVIEW.md                    # A factual review of the license
 ├── ORGANIZATION-PROFILE-DRAFT.md        # A proposed organization profile
@@ -74,6 +79,7 @@ drafts/
 .codespellrc                             # codespell configuration
 ruff.toml                                # ruff configuration
 .gitleaks.toml                           # Secret scanning configuration
+.pre-commit-config.yaml                  # pre-commit hook configuration
 .gitattributes                           # Normalizes line endings to LF
 .gitignore                               # Ignores Python bytecode and node_modules
 .markdownlint.json                       # markdownlint configuration
