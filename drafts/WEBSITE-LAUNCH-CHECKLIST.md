@@ -4,7 +4,7 @@
 
 ## The situation
 
-`naabtech.ir` currently serves the coming soon page, which is the `comingsoon-webpage` repository. The previous version of the website is kept in the `old-website` repository. The public repositories of the organization are the defaults repository and the coming soon page; the products are delivered privately.
+`naabtech.ir` currently serves the coming soon page. When the new website is ready to launch, the website repository, organization profile, and repository metadata are updated to reflect the release.
 
 ## Before the launch
 
@@ -17,5 +17,5 @@
 
 ## After the launch
 
-1. **Re-run the link check.** The coming soon page, the previous website, and the published profile all carry links to `naabtech.ir`. A link check in continuous integration covers the repositories; the profile page is not covered by it.
+1. **Re-run the link check.** The website and the published profile carry links to `naabtech.ir`. A link check in continuous integration covers the repositories; the profile page is not covered by it.
 2. **Update the onboarding checklist** so that it describes the repositories that exist after the launch.
