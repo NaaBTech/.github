@@ -13,11 +13,13 @@ Neither problem is a matter of taste. The first makes the profile read as though
 The change keeps the brand, the tagline, the three areas of activity, and every contact channel exactly as they are. It replaces the section about public repositories with a paragraph that introduces the products without promising source code that is not published, and it renames the section so that it describes what it actually contains.
 
 ```markdown
-## What We Build
+## How We Work
 
-NaaB Tech builds software and technology across cybersecurity, software, and IT solutions.
+Our public repositories reflect our engineering standards, continuous integration practices, and governance baselines. They are the best place to see how we work: the contribution guidelines, the security policy, and the tooling that keeps them honest are all open, and contributions are welcome.
 
-Our public repositories are the best place to see how we work: the contribution guidelines, the security policy, and the tooling that keeps them honest are all open, and contributions to them are welcome. Each project sets its own scope and contribution process, so the repository itself is the best place to start.
+- **Contribution Guidelines** — Before opening a pull request, please review [`CONTRIBUTING.md`](../CONTRIBUTING.md).
+- **Security Policy** — For any security-sensitive concerns, follow [`SECURITY.md`](../SECURITY.md) instead of opening a public issue.
+- **Code of Conduct** — We are committed to an open and welcoming community; please review [`CODE_OF_CONDUCT.md`](../CODE_OF_CONDUCT.md).
 ```
 
 ## What this does not change
