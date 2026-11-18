@@ -14,9 +14,11 @@ NaaB Tech is a technology company working across IT, software, and cybersecurity
 - **Software & Technology** — Designing and building software and technology products.
 - **IT Solutions** — Advising on, and implementing, the technology that an organization relies on.
 
-## Featured Projects
+## What We Build
 
-Our public repositories are the best place to see what we build in practice, and contributions to them are welcome. Products are introduced and published under the NaaB prefix. Each project sets its own scope and contribution process, so the repository itself is the best place to start.
+NaaB Tech builds software and technology across cybersecurity, software, and IT solutions. The products are delivered privately, and the repositories that hold the organization defaults are public.
+
+Our public repositories are the best place to see how we work: the contribution guidelines, the security policy, and the tooling that keeps them honest are all open, and contributions to them are welcome. Each project sets its own scope and contribution process, so the repository itself is the best place to start.
 
 Before opening a pull request, read the project's `CONTRIBUTING.md`. For anything security-sensitive, follow its `SECURITY.md` instead of opening a public issue.
 

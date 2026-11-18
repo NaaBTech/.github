@@ -183,6 +183,7 @@ REQUIRED_TOOLING_FILES = {
     ".yamllint.yml": "yamllint configuration",
     ".codespellrc": "codespell configuration",
     ".gitleaks.toml": "secret scanning configuration",
+    ".pre-commit-config.yaml": "pre-commit hook configuration",
     "ruff.toml": "ruff configuration",
     "package.json": "Node tooling declaration",
     "package-lock.json": "pinned Node dependency tree",
@@ -200,6 +201,7 @@ REQUIRED_TOOLING_FILES = {
     "scripts/validate_docs.py": "documentation validator",
     "scripts/test_validate_docs.py": "validator tests",
     "scripts/update_schemas.py": "schema refresh tool",
+    "scripts/sync_labels.py": "label synchronization tool",
 }
 
 # The GitHub form files. Only these are checked for keys that YAML parses as
