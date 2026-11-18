@@ -2,25 +2,25 @@
 
 <div align="center">
 
-**Technology. Innovation. Security.**
+**Technology · Innovation · Security.**
 
 </div>
 
-NaaB Tech is a technology company working across IT, software, and cybersecurity. We treat security as part of the design rather than a final check before release.
+NaaB Tech is a technology company delivering solutions across IT, software engineering, and cybersecurity. We treat security as part of the design rather than a final check before release.
 
 ## What We Do
 
 - **Cybersecurity** — Protecting systems, applications, and the data they handle.
-- **Software & Technology** — Designing and building software and technology products.
-- **IT Solutions** — Advising on, and implementing, the technology that an organization relies on.
+- **Software & Technology** — Designing and engineering reliable, maintainable software and technology products.
+- **IT Solutions** — Advising on, and implementing, the technology and infrastructure that an organization relies on.
 
-## What We Build
+## How We Work
 
-NaaB Tech builds software and technology across cybersecurity, software, and IT solutions.
+Our public repositories reflect our engineering standards, continuous integration practices, and governance baselines. They are the best place to see how we work: the contribution guidelines, the security policy, and the tooling that keeps them honest are all open, and contributions are welcome.
 
-Our public repositories are the best place to see how we work: the contribution guidelines, the security policy, and the tooling that keeps them honest are all open, and contributions to them are welcome. Each project sets its own scope and contribution process, so the repository itself is the best place to start.
-
-Before opening a pull request, read the project's `CONTRIBUTING.md`. For anything security-sensitive, follow its `SECURITY.md` instead of opening a public issue.
+- **Contribution Guidelines** — Before opening a pull request, please review [`CONTRIBUTING.md`](../CONTRIBUTING.md).
+- **Security Policy** — For any security-sensitive concerns, follow [`SECURITY.md`](../SECURITY.md) instead of opening a public issue.
+- **Code of Conduct** — We are committed to an open and welcoming community; please review [`CODE_OF_CONDUCT.md`](../CODE_OF_CONDUCT.md).
 
 ---
 
