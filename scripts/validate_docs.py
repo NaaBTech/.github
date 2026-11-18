@@ -160,6 +160,7 @@ REQUIRED_FILES = {
     "profile/README.md": "organization profile readme",
     "CONTRIBUTING.md": "contribution guidelines",
     "CODE_OF_CONDUCT.md": "code of conduct",
+    "LICENSE": "repository license",
     "SECURITY.md": "security policy",
     "SUPPORT.md": "support guidance",
     "PULL_REQUEST_TEMPLATE.md": "pull request template",
@@ -181,6 +182,7 @@ REQUIRED_TOOLING_FILES = {
     ".markdownlintignore": "markdownlint exclusions",
     ".yamllint.yml": "yamllint configuration",
     ".codespellrc": "codespell configuration",
+    ".gitleaks.toml": "secret scanning configuration",
     "ruff.toml": "ruff configuration",
     "package.json": "Node tooling declaration",
     "package-lock.json": "pinned Node dependency tree",
@@ -465,10 +467,10 @@ def validate_config_document(name, data, schema):
                     )
                 about = link.get("about")
                 if isinstance(about, str) and len(about) > 1024:
-                        errors.append(
-                            f"{name}: contact_links[{index}]: 'about' must be "
-                            "1024 characters or fewer"
-                        )
+                    errors.append(
+                        f"{name}: contact_links[{index}]: 'about' must be "
+                        "1024 characters or fewer"
+                    )
     return errors
 
 

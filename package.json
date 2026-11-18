@@ -4,6 +4,7 @@
   "private": true,
   "description": "Documentation linting tooling for the NaaB Tech GitHub organization defaults repository.",
   "scripts": {
+    "lint": "npm run lint:markdown",
     "lint:markdown": "markdownlint --config .markdownlint.json \"**/*.md\""
   },
   "devDependencies": {
