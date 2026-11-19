@@ -2,7 +2,7 @@
 
 <div align="center">
 
-**Technology · Innovation · Security.**
+**Technology · Innovation · Security**
 
 </div>
 
