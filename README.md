@@ -198,7 +198,7 @@ Three documents in [`drafts/`](drafts) are proposals for the organization owners
 
 | Draft | What it covers |
 | --- | --- |
-| [`drafts/ORGANIZATION-PROFILE-DRAFT.md`](drafts/ORGANIZATION-PROFILE-DRAFT.md) | The organization profile, which invites the reader to public repositories that do not hold the products |
+| [`drafts/ORGANIZATION-PROFILE-DRAFT.md`](drafts/ORGANIZATION-PROFILE-DRAFT.md) | The organization profile proposal, introducing NaaB Tech's engineering standards and activities |
 | [`drafts/LICENSE-REVIEW.md`](drafts/LICENSE-REVIEW.md) | A factual review of the Apache-2.0 decision, and what still needs a qualified legal review |
 | [`drafts/WEBSITE-LAUNCH-CHECKLIST.md`](drafts/WEBSITE-LAUNCH-CHECKLIST.md) | What has to change when the main website is published |
 

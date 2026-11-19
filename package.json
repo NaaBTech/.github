@@ -10,6 +10,10 @@
   "devDependencies": {
     "markdownlint-cli": "0.50.0"
   },
+  "overrides": {
+    "katex": "^0.19.1",
+    "minimatch": "^11.0.9"
+  },
   "engines": {
     "node": ">=22"
   }
