@@ -1,0 +1,27 @@
+# Configuration for actions/labeler.
+# Maps labels to changed file paths in pull requests.
+
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - '**/*.md'
+          - 'docs/**'
+
+dependencies:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'package.json'
+          - 'package-lock.json'
+          - 'requirements-docs.txt'
+          - '.github/dependabot.yml'
+
+security:
+  - changed-files:
+      - any-glob-to-any-file:
+          - 'SECURITY.md'
+          - '.github/VULNERABILITY_REPORT.yml'
+          - '.gitleaks.toml'
+          - '.github/workflows/codeql.yml'
+          - '.github/workflows/scorecard.yml'
+          - '.github/workflows/reusable-gitleaks.yml'
+          - '.github/workflows/reusable-trivy.yml'

@@ -1,0 +1,44 @@
+name: Scorecard supply-chain security
+
+on:
+  schedule:
+    # Weekly scan on Monday 04:00 UTC.
+    - cron: '0 4 * * 1'
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions: read-all
+
+concurrency:
+  group: scorecard-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analysis:
+    name: Scorecard analysis
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      id-token: write
+      contents: read
+      actions: read
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Run OpenSSF Scorecard analysis
+        uses: ossf/scorecard-action@f49aabb0b5af39366191b27fc94703c8ab535b70  # v2.4.1
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          publish_results: true
+
+      - name: Upload results to GitHub code scanning
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: results.sarif

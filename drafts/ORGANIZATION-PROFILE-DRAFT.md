@@ -1,6 +1,6 @@
 # The organization profile: a proposal
 
-**Status: a proposal for the organization owners. The published profile is not changed by this document.**
+**Status: Approved and adopted. The profile was published to `profile/README.md`.**
 
 ## The gap
 
