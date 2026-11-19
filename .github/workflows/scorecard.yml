@@ -1,6 +1,8 @@
 name: Scorecard supply-chain security
 
 on:
+  # For Branch-Protection check. Only the default branch is supported.
+  branch_protection_rule:
   schedule:
     # Weekly scan on Monday 04:00 UTC.
     - cron: '0 4 * * 1'
@@ -32,7 +34,7 @@ jobs:
           persist-credentials: false
 
       - name: Run OpenSSF Scorecard analysis
-        uses: ossf/scorecard-action@f49aabb0b5af39366191b27fc94703c8ab535b70  # v2.4.1
+        uses: ossf/scorecard-action@v2.6.0
         with:
           results_file: results.sarif
           results_format: sarif

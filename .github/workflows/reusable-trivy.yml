@@ -29,7 +29,7 @@ jobs:
           persist-credentials: false
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@512607106093845b5969e0e5a1b3be0c8ad9a6e6  # v0.36.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: ${{ inputs.scan-type }}
           scan-ref: '.'
