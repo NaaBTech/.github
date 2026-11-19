@@ -1,7 +1,8 @@
 # NaaB Tech — Organization Resources
 
-[![Validate documentation](https://github.com/NaaBTech/.github/actions/workflows/validate-docs.yml/badge.svg)](https://github.com/NaaBTech/.github/actions/workflows/validate-docs.yml)
-[![CodeQL](https://github.com/NaaBTech/.github/actions/workflows/codeql.yml/badge.svg)](https://github.com/NaaBTech/.github/actions/workflows/codeql.yml)
+[![Validate documentation](https://github.com/NaaBTech/.github/actions/workflows/validate-docs.yml/badge.svg?branch=main)](https://github.com/NaaBTech/.github/actions/workflows/validate-docs.yml)
+[![CodeQL](https://github.com/NaaBTech/.github/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/NaaBTech/.github/actions/workflows/codeql.yml)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/NaaBTech/.github/badge)](https://scorecard.dev/viewer/?pup=github.com/NaaBTech/.github)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 This repository holds the organization-wide resources for the [NaaB Tech](https://github.com/NaaBTech) GitHub organization:
@@ -46,10 +47,15 @@ profile/
 │   ├── feature_request.yml              # Default issue form: feature request
 │   ├── question.yml                     # Default issue form: question
 │   └── config.yml                       # Default issue template chooser
+├── labeler.yml                          # PR auto-labeler configuration
 ├── VULNERABILITY_REPORT.yml             # Default private vulnerability report form
 └── workflows/
     ├── codeql.yml                       # CodeQL security analysis workflow
+    ├── first-interaction.yml            # Contributor greeting workflow
+    ├── labeler.yml                      # PR auto-labeling workflow
     ├── reusable-gitleaks.yml            # Reusable secret scanning workflow
+    ├── reusable-trivy.yml               # Reusable vulnerability scanning workflow
+    ├── scorecard.yml                    # OpenSSF Scorecard supply-chain security
     └── validate-docs.yml                # Validation workflow for this repository
 CODE_OF_CONDUCT.md                       # Default code of conduct
 CONTRIBUTING.md                          # Default contribution guidelines
