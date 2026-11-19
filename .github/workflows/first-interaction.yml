@@ -20,13 +20,13 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Welcome contributor
-        uses: actions/first-interaction@v3.1.0
+        uses: actions/first-interaction@1c4688942c71f71d4f5502a26ea67c331730fa4d  # v3.1.0
         with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
-          issue-message: >-
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          issue_message: >-
             Thank you for opening an issue with NaaB Tech! Our maintainers will review
             your submission. Please ensure you have reviewed our Code of Conduct.
-          pr-message: >-
+          pr_message: >-
             Thank you for your pull request! We appreciate your contribution to NaaB Tech.
             Please ensure all checks pass and that your contribution follows our
             Contributing Guidelines.
