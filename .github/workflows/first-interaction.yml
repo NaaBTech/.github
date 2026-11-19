@@ -20,7 +20,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Welcome contributor
-        uses: actions/first-interaction@1114b8964e16d9e03d47ad90e38a2c2eb6fa1544  # v3.1.0
+        uses: actions/first-interaction@v3.1.0
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           issue-message: >-
