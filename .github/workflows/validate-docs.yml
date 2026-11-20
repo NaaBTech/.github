@@ -93,7 +93,7 @@ jobs:
           cache-dependency-path: requirements-docs.txt
 
       - name: Install validation tooling
-        run: python -m pip install --disable-pip-version-check --requirement requirements-docs.txt
+        run: python -m pip install --disable-pip-version-check --require-hashes --requirement requirements-docs.txt
 
       - name: Check YAML syntax and style
         run: yamllint --strict --config-file .yamllint.yml .
