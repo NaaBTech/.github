@@ -7,6 +7,7 @@ node_modules/
 
 # The cache that ruff writes when it runs.
 .ruff_cache/
+.pytest_cache/
 
 # Working files of scripts/update_schemas.py.
 # schemas/.naabtech-backups/ holds the per-transaction recovery copies. A backup
