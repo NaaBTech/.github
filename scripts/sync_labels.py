@@ -18,6 +18,7 @@ import argparse
 import json
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
 
 # The standard NaaB Tech label set: (name, color, description)
@@ -102,7 +103,7 @@ def sync_api(repo, token, dry_run=False):
         except urllib.error.HTTPError as exc:
             if exc.code == 422:
                 # Label already exists; update it via PATCH.
-                patch_url = f"{url}/{label['name']}"
+                patch_url = f"{url}/{urllib.parse.quote(label['name'])}"
                 patch_req = urllib.request.Request(
                     patch_url, data=payload, headers=headers, method="PATCH"
                 )

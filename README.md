@@ -2,7 +2,7 @@
 
 [![Validate documentation](https://github.com/NaaBTech/.github/actions/workflows/validate-docs.yml/badge.svg?branch=main)](https://github.com/NaaBTech/.github/actions/workflows/validate-docs.yml)
 [![CodeQL](https://github.com/NaaBTech/.github/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/NaaBTech/.github/actions/workflows/codeql.yml)
-[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/NaaBTech/.github/badge)](https://scorecard.dev/viewer/?pup=github.com/NaaBTech/.github)
+[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/NaaBTech/.github/badge)](https://scorecard.dev/viewer/?uri=github.com/NaaBTech/.github)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
 This repository holds the organization-wide resources for the [NaaB Tech](https://github.com/NaaBTech) GitHub organization:
