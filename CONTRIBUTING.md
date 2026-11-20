@@ -117,7 +117,7 @@ Common types:
 | `chore` | Maintenance that does not touch source or tests |
 | `revert` | Reverts an earlier commit |
 
-Write the summary in the imperative mood and keep it under roughly 72 characters. Explain the reasoning in the body when it is not obvious from the diff:
+Write the summary in the imperative mood and keep it concise (under 60 to 72 characters) so that GitHub pull request titles created from single commits are not truncated in the interface. Explain the reasoning in the body when it is not obvious from the diff:
 
 ```text
 fix(auth): reject tokens issued before the signing key rotation

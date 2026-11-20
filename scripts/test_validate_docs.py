@@ -50,6 +50,7 @@ from validate_docs import (  # noqa: E402
     validate_form_document,
 )
 import update_schemas  # noqa: E402
+import sync_labels  # noqa: E402
 
 VALID_ISSUE_FORM = """
 name: Valid form
@@ -2589,6 +2590,26 @@ def run():
         failures.append(
             f"schema updater: the generic handler claimed that nothing changed: {stderr_text!r}"
         )
+
+    # Test sync_labels CLI and API behavior
+    behavior += 1
+    gh_cmds = sync_labels.export_gh_commands("NaaBTech/test-repo")
+    if "--repo NaaBTech/test-repo" not in gh_cmds or "gh label create" not in gh_cmds:
+        failures.append("sync_labels: export_gh_commands did not include the repo or command")
+
+    behavior += 1
+    buffer = _io.StringIO()
+    with contextlib.redirect_stdout(buffer):
+        dry_run_exit = sync_labels.sync_api("NaaBTech/test-repo", token=None, dry_run=True)
+    if dry_run_exit != 0 or "[dry-run]" not in buffer.getvalue():
+        failures.append("sync_labels: dry-run mode did not exit with 0 or print dry-run notice")
+
+    behavior += 1
+    err_buf = _io.StringIO()
+    with contextlib.redirect_stderr(err_buf):
+        no_token_exit = sync_labels.sync_api("NaaBTech/test-repo", token=None, dry_run=False)
+    if no_token_exit != 1 or "personal access token" not in err_buf.getvalue():
+        failures.append("sync_labels: sync_api without token did not exit with 1")
 
     checked = negative + positive + behavior
     applicable = checked + skipped
