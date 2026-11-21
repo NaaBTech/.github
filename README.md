@@ -49,11 +49,13 @@ profile/
 │   ├── question.yml                     # Default issue form: question
 │   └── config.yml                       # Default issue template chooser
 ├── labeler.yml                          # PR auto-labeler configuration
+├── release-drafter.yml                  # Release Drafter configuration
 ├── VULNERABILITY_REPORT.yml             # Default private vulnerability report form
 └── workflows/
     ├── codeql.yml                       # CodeQL security analysis workflow
     ├── first-interaction.yml            # Contributor greeting workflow
     ├── labeler.yml                      # PR auto-labeling workflow
+    ├── release-drafter.yml              # Release notes drafting workflow
     ├── reusable-gitleaks.yml            # Reusable secret scanning workflow
     ├── reusable-trivy.yml               # Reusable vulnerability scanning workflow
     ├── scorecard.yml                    # OpenSSF Scorecard supply-chain security

@@ -1,0 +1,48 @@
+name-template: 'v$RESOLVED_VERSION'
+tag-template: 'v$RESOLVED_VERSION'
+categories:
+  - title: '🚀 Features & Improvements'
+    labels:
+      - 'enhancement'
+      - 'feature'
+  - title: '🐛 Bug Fixes'
+    labels:
+      - 'bug'
+      - 'fix'
+  - title: '🔒 Security Hardening'
+    labels:
+      - 'security'
+  - title: '📝 Documentation'
+    labels:
+      - 'documentation'
+      - 'docs'
+  - title: '📦 Dependencies & Tooling'
+    labels:
+      - 'dependencies'
+change-template: '- $TITLE (#$NUMBER) @$AUTHOR'
+change-title-escaped: true
+version-resolver:
+  major:
+    labels:
+      - 'major'
+      - 'breaking-change'
+  minor:
+    labels:
+      - 'minor'
+      - 'enhancement'
+  patch:
+    labels:
+      - 'patch'
+      - 'bug'
+      - 'fix'
+      - 'security'
+      - 'documentation'
+      - 'dependencies'
+  default: patch
+template: |
+  ## What's Changed
+
+  $CHANGES
+
+  ---
+  **Full Changelog**: https://github.com/NaaBTech/.github/compare/$PREVIOUS_TAG...v$RESOLVED_VERSION
