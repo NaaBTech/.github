@@ -96,7 +96,7 @@ def sync_api(repo, token, dry_run=False):
         payload = json.dumps(label).encode("utf-8")
         req = urllib.request.Request(url, data=payload, headers=headers, method="POST")
         try:
-            with urllib.request.urlopen(req) as resp:
+            with urllib.request.urlopen(req, timeout=30) as resp:
                 if resp.status in (200, 201):
                     print(f"created: {label['name']}")
                     success += 1
@@ -108,7 +108,7 @@ def sync_api(repo, token, dry_run=False):
                     patch_url, data=payload, headers=headers, method="PATCH"
                 )
                 try:
-                    with urllib.request.urlopen(patch_req) as patch_resp:
+                    with urllib.request.urlopen(patch_req, timeout=30) as patch_resp:
                         if patch_resp.status == 200:
                             print(f"updated: {label['name']}")
                             success += 1
