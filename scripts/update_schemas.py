@@ -388,7 +388,6 @@ def build_artifacts(downloads):
             "role": "license text" if "LICENSE" in name else "upstream notice attribution",
         }
 
-    provenance["schemas"][derived_name]["vendored_sha256"] = sha256_bytes(artifacts[derived_name])
     artifacts["PROVENANCE.json"] = encode_json(provenance)
     return artifacts
 

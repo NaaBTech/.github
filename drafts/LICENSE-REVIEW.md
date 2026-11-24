@@ -31,7 +31,7 @@ The vendored material carries its own license, which is the same one, so there i
 
 1. **The intended publication model.** The repository holds the defaults that other repositories inherit. Apache-2.0 is permissive, so a company repository can adopt these defaults and adapt them without becoming a derivative work. If the intention were the opposite, the license would have to change, and so would the contribution model.
 
-2. **Contributor ownership.** Outside contributions carry the copyright of their authors unless a contributor agreement or a developer certificate of origin is in place. The repository asks for a signed-off-by line but does not require one, and it has no contributor agreement. Under a permissive license this is low risk, but it is an open point.
+2. **Contributor ownership.** Outside contributions carry the copyright of their authors unless a contributor agreement or a developer certificate of origin is in place. The repository has neither a Developer Certificate of Origin (`Signed-off-by`) requirement nor a contributor agreement. Under a permissive license this is low risk, but it is an open point.
 
 3. **Trademarks.** Apache-2.0 does not grant trademark rights. The brand name and the product prefix are used as names, not as a trademark licence. If the organization wants to protect the brand, that is a separate registration, and the wording of the documentation should stay descriptive.
 

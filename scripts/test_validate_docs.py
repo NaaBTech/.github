@@ -20,6 +20,8 @@ Usage:
     python scripts/test_validate_docs.py
 """
 
+import contextlib
+import io as _io
 import json
 import os
 import shutil
@@ -1495,9 +1497,6 @@ def run():
     # as a residual file that is left in place, and never as a recoverable
     # copy, and no reported path may end in "None".
     behavior += 1
-    import contextlib
-    import io as _io
-
     temp_root = make_temp_repo()
     try:
         artifacts = {
@@ -1698,9 +1697,6 @@ def run():
     # content cannot be restored, and removing the promoted file would not
     # restore it either, so the promoted file must be left in place.
     behavior += 1
-    import contextlib
-    import io as _io
-
     temp_root = make_temp_repo()
     try:
         artifacts = {
@@ -2532,9 +2528,6 @@ def run():
     # ------------------------------------------------------------------
     # Behavior case: a failed rollback is reported as such.
     # ------------------------------------------------------------------
-    import contextlib
-    import io as _io
-
     behavior += 1
     original_refresh = update_schemas.refresh
 
@@ -2591,7 +2584,42 @@ def run():
             f"schema updater: the generic handler claimed that nothing changed: {stderr_text!r}"
         )
 
-    # Test sync_labels CLI and API behavior
+    # Test anchor errors report the actual target path (not literal '{target}').
+    behavior += 1
+    temp_root = make_temp_repo(files={
+        "README.md": "# Root\n\n[x](LICENSE#sec)\n[y](other.md#missing)\n",
+        "LICENSE": "MIT\n",
+        "other.md": "# Other\n",
+    })
+    try:
+        errors, _warnings = run_checks(temp_root)
+        non_md = [m for m in errors if "is not a Markdown file" in m]
+        missing_anc = [m for m in errors if "does not exist in" in m]
+        if not non_md or "LICENSE" not in non_md[0] or "{target}" in non_md[0]:
+            failures.append(f"markdown anchors: non-Markdown target error malformed: {non_md}")
+        if not missing_anc or "other.md" not in missing_anc[0] or "{target}" in missing_anc[0]:
+            failures.append(
+                f"markdown anchors: missing anchor target error malformed: {missing_anc}"
+            )
+    finally:
+        shutil.rmtree(temp_root, ignore_errors=True)
+
+    # Test .pytest_cache is excluded identically to .ruff_cache.
+    behavior += 1
+    temp_root = make_temp_repo(files={"README.md": "# Root\n"})
+    try:
+        cache_dir = os.path.join(temp_root, ".pytest_cache")
+        os.makedirs(cache_dir, exist_ok=True)
+        with open(os.path.join(cache_dir, "README.md"), "w", encoding="utf-8") as h:
+            h.write("# pytest cache\n")
+        _files, _rej = repo_files(temp_root, (".md",))
+        names = {display for _p, display in _files}
+        if any(".pytest_cache" in n for n in names):
+            failures.append(f"file discovery: .pytest_cache was not excluded: {names}")
+    finally:
+        shutil.rmtree(temp_root, ignore_errors=True)
+
+    # Test sync_labels CLI, API network error handling, and env-var fallback.
     behavior += 1
     gh_cmds = sync_labels.export_gh_commands("NaaBTech/test-repo")
     if "--repo NaaBTech/test-repo" not in gh_cmds or "gh label create" not in gh_cmds:
@@ -2610,6 +2638,49 @@ def run():
         no_token_exit = sync_labels.sync_api("NaaBTech/test-repo", token=None, dry_run=False)
     if no_token_exit != 1 or "personal access token" not in err_buf.getvalue():
         failures.append("sync_labels: sync_api without token did not exit with 1")
+
+    behavior += 1
+    import urllib.error as _urllib_error
+    import urllib.request as _urllib_request
+
+    orig_urlopen = _urllib_request.urlopen
+
+    def failing_urlopen(*_args, **_kwargs):
+        raise _urllib_error.URLError("simulated network timeout")
+
+    _urllib_request.urlopen = failing_urlopen
+    net_err_buf = _io.StringIO()
+    try:
+        with contextlib.redirect_stderr(net_err_buf), contextlib.redirect_stdout(_io.StringIO()):
+            net_exit = sync_labels.sync_api("NaaBTech/test-repo", token="dummy", dry_run=False)
+    finally:
+        _urllib_request.urlopen = orig_urlopen
+    if net_exit != 1 or "simulated network timeout" not in net_err_buf.getvalue():
+        failures.append(
+            f"sync_labels: network error was not handled cleanly: {net_err_buf.getvalue()!r}"
+        )
+
+    behavior += 1
+    orig_argv = sys.argv
+    orig_gh_token = os.environ.get("GITHUB_TOKEN")
+    os.environ["GITHUB_TOKEN"] = "env-dummy-token"
+    sys.argv = ["sync_labels.py", "--repo", "NaaBTech/test-repo"]
+    _urllib_request.urlopen = failing_urlopen
+    env_err_buf = _io.StringIO()
+    try:
+        with contextlib.redirect_stderr(env_err_buf), contextlib.redirect_stdout(_io.StringIO()):
+            env_exit = sync_labels.main()
+    finally:
+        _urllib_request.urlopen = orig_urlopen
+        sys.argv = orig_argv
+        if orig_gh_token is None:
+            os.environ.pop("GITHUB_TOKEN", None)
+        else:
+            os.environ["GITHUB_TOKEN"] = orig_gh_token
+    if env_exit != 1 or "simulated network timeout" not in env_err_buf.getvalue():
+        failures.append(
+            f"sync_labels: main() did not pick up GITHUB_TOKEN env var: {env_err_buf.getvalue()!r}"
+        )
 
     checked = negative + positive + behavior
     applicable = checked + skipped

@@ -10,12 +10,14 @@ set in any NaaB Tech repository using either GitHub API or the GitHub CLI (gh).
 
 Usage:
     python scripts/sync_labels.py --dry-run
+    GITHUB_TOKEN=<token> python scripts/sync_labels.py --repo NaaBTech/<repository>
     python scripts/sync_labels.py --repo NaaBTech/<repository> --token <token>
     python scripts/sync_labels.py --export-gh
 """
 
 import argparse
 import json
+import os
 import sys
 import urllib.error
 import urllib.parse
@@ -80,7 +82,8 @@ def sync_api(repo, token, dry_run=False):
 
     if not token:
         sys.stderr.write(
-            "error: a GitHub personal access token (--token) is required to apply labels.\n"
+            "error: a GitHub personal access token (--token or GITHUB_TOKEN) is required "
+            "to apply labels.\n"
         )
         return 1
 
@@ -112,10 +115,12 @@ def sync_api(repo, token, dry_run=False):
                         if patch_resp.status == 200:
                             print(f"updated: {label['name']}")
                             success += 1
-                except urllib.error.HTTPError as patch_exc:
+                except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError) as patch_exc:
                     sys.stderr.write(f"failed to update {label['name']}: {patch_exc}\n")
             else:
                 sys.stderr.write(f"failed to create {label['name']}: {exc}\n")
+        except (urllib.error.URLError, TimeoutError) as exc:
+            sys.stderr.write(f"failed to create {label['name']}: {exc}\n")
 
     print(f"\nSynced {success}/{len(STANDARD_LABELS)} labels to {repo}.")
     return 0 if success == len(STANDARD_LABELS) else 1
@@ -132,7 +137,7 @@ def main():
     )
     parser.add_argument(
         "--token",
-        help="GitHub personal access token with repository admin or write permissions.",
+        help="GitHub token (defaults to GITHUB_TOKEN or GH_TOKEN environment variable).",
     )
     parser.add_argument(
         "--dry-run",
@@ -151,7 +156,8 @@ def main():
         print(export_gh_commands(args.repo))
         return 0
 
-    return sync_api(args.repo, args.token, dry_run=args.dry_run or not args.token)
+    token = args.token or os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
+    return sync_api(args.repo, token, dry_run=args.dry_run or not token)
 
 
 if __name__ == "__main__":

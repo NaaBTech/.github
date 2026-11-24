@@ -40,7 +40,7 @@ A committed file is the durable choice — it travels with the repository and is
 
 - [ ] **Repository-specific policies** — added only where the project genuinely needs something different. Each override should be specific to the project, not a copy of the default.
 - [ ] **Issue forms** — the organization provides Bug report, Feature request, and Question forms by default. A project that needs its own forms adds `.github/ISSUE_TEMPLATE/` to the repository, which replaces **all** the organization defaults for that repository.
-- [ ] **Labels** — the default forms apply `bug`, `enhancement`, and `question`. Those labels must exist in the repository, or the forms are submitted without a label. Organization default labels apply to **newly created repositories only**, so an existing repository needs them created manually. Labels belong to the repository, so a maintainer of that repository creates them.
+- [ ] **Labels** — the default forms apply `bug`, `enhancement`, and `question`. Those labels must exist in the repository, or the forms are submitted without a label. Organization default labels apply to **newly created repositories only**, so an existing repository needs them created manually or synchronized with [`scripts/sync_labels.py`](scripts/sync_labels.py). Labels belong to the repository, so a maintainer of that repository creates them.
 - [ ] **Pull request template** — inherited by default. Add a repository-level one only if the project needs a different one.
 - [ ] **Support and Code of Conduct** — inherited by default, and linked from the README.
 - [ ] **Issue tracker** — enabled, with the forms above available in the template chooser.
@@ -152,9 +152,9 @@ Reference: [Sharing actions and workflows with your organization](https://docs.g
 
 ---
 
-## The proposals that are waiting for a decision
+## The proposals and records in drafts
 
-Three documents are prepared and are not in effect. They are listed in the [repository README](README.md#security-baseline): a proposed organization profile, a factual review of the license, and the checklist for the launch of the main website. A responsible-testing and safe-harbor draft is prepared as well and is held with the security review, because a draft that grants no permission has no value in public and could be read as a permission the organization never gave.
+Three documents in `drafts/` track organization-level decisions, listed in the [repository README](README.md#security-baseline). The organization profile proposal has been approved and published to `profile/README.md`; the license review and the website launch checklist remain waiting for owner action. A responsible-testing and safe-harbor draft is prepared as well and is held with the security review, because a draft that grants no permission has no value in public and could be read as a permission the organization never gave.
 
 ---
 
