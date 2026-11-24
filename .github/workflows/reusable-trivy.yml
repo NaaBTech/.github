@@ -13,6 +13,11 @@ on:
         type: string
         default: 'CRITICAL,HIGH'
         required: false
+      exit-code:
+        description: Exit code when vulnerabilities are found ('0' for advisory, '1' to fail)
+        type: string
+        default: '0'
+        required: false
 
 permissions:
   contents: read
@@ -29,10 +34,10 @@ jobs:
           persist-credentials: false
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8  # v0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
         with:
           scan-type: ${{ inputs.scan-type }}
           scan-ref: '.'
           format: 'table'
           severity: ${{ inputs.severity }}
-          exit-code: '0'
+          exit-code: ${{ inputs.exit-code }}

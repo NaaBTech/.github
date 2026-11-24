@@ -114,7 +114,7 @@ Not every file in this repository applies to other organization repositories. Th
 
 `README.md` at the root of this repository is the readme for **this** repository. It is not a community health file and is not inherited by other repositories. `REPOSITORY_ONBOARDING.md` is a maintainer guide for this repository; GitHub has no mechanism for inheriting it.
 
-**Workflows are not organization defaults.** GitHub inherits community health files between repositories; it does not inherit workflow files. The `validate-docs.yml` workflow runs only in `NaaBTech/.github`. Every project that needs CI has its own workflow in its own `.github/workflows/` directory — see [REPOSITORY_ONBOARDING.md](REPOSITORY_ONBOARDING.md).
+**Workflows are not organization defaults.** GitHub inherits community health files between repositories; it does not inherit workflow files. The `validate-docs.yml` workflow runs only in `NaaBTech/.github`. Shared reusable workflows (`reusable-gitleaks.yml` and `reusable-trivy.yml`) must still be called explicitly by each consuming repository, and every project that needs CI defines its own workflows under `.github/workflows/` — see [REPOSITORY_ONBOARDING.md](REPOSITORY_ONBOARDING.md).
 
 ---
 
@@ -155,7 +155,7 @@ Two things are therefore required for automatic labeling to work:
 1. **The label must exist in the destination repository.** It is present in this repository, because the default forms live here.
 2. **New repositories need the labels up front.** Organization owners can configure default labels under **Organization Settings → Repository → General → Repository labels**. Default labels are included in **newly created repositories only** — adding, editing, or deleting an organization default label does not add, edit, or delete that label in existing repositories.
 
-Existing repositories in the organization therefore need `bug`, `enhancement`, and `question` created in them, or the forms will be submitted without a label. That is a repository-level action, performed by a maintainer of each repository. The checklist in [`REPOSITORY_ONBOARDING.md`](REPOSITORY_ONBOARDING.md) covers it.
+Existing repositories in the organization therefore need `bug`, `enhancement`, and `question` created in them, or the forms will be submitted without a label. That is a repository-level action, performed by a maintainer of each repository (or automated with `scripts/sync_labels.py`). The checklist in [`REPOSITORY_ONBOARDING.md`](REPOSITORY_ONBOARDING.md) covers it.
 
 ---
 
@@ -203,11 +203,11 @@ Copyright 2026 NaaB Tech. Changing this license requires the owners' approval an
 
 The organization defaults are scanned for committed secrets on every pull request, with [gitleaks](https://github.com/gitleaks/gitleaks) pinned to one version and its checksum verified. The configuration is in [`.gitleaks.toml`](.gitleaks.toml), and the known false positives of these files are listed there with the reason for each.
 
-Three documents in [`drafts/`](drafts) are proposals for the organization owners. They are not in effect, and they do not change the security policy.
+Three documents in [`drafts/`](drafts) record organization-level reviews and proposals. The organization profile proposal has been approved and published to `profile/README.md`; the remaining two do not change the security policy:
 
-| Draft | What it covers |
+| Draft | Status and what it covers |
 | --- | --- |
-| [`drafts/ORGANIZATION-PROFILE-DRAFT.md`](drafts/ORGANIZATION-PROFILE-DRAFT.md) | The organization profile proposal, introducing NaaB Tech's engineering standards and activities |
+| [`drafts/ORGANIZATION-PROFILE-DRAFT.md`](drafts/ORGANIZATION-PROFILE-DRAFT.md) | Approved and adopted into `profile/README.md` |
 | [`drafts/LICENSE-REVIEW.md`](drafts/LICENSE-REVIEW.md) | A factual review of the Apache-2.0 decision, and what still needs a qualified legal review |
 | [`drafts/WEBSITE-LAUNCH-CHECKLIST.md`](drafts/WEBSITE-LAUNCH-CHECKLIST.md) | What has to change when the main website is published |
 
