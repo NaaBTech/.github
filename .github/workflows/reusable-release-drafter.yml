@@ -1,0 +1,30 @@
+name: Reusable Release Drafter
+
+on:
+  workflow_call:
+    inputs:
+      config-name:
+        description: 'Path to the Release Drafter configuration file'
+        required: false
+        type: string
+        default: 'release-drafter.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  draft_release:
+    name: Draft release notes
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: read
+
+    steps:
+      - name: Update draft release notes
+        uses: release-drafter/release-drafter@d1a19e60e81a7e650d00a7de9277f87e439117ea  # v7.11.0
+        with:
+          config-name: ${{ inputs.config-name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
