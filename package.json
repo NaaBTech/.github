@@ -8,7 +8,7 @@
     "lint:markdown": "markdownlint --config .markdownlint.json \"**/*.md\""
   },
   "devDependencies": {
-    "markdownlint-cli": "0.50.0"
+    "markdownlint-cli": "0.50.1"
   },
   "overrides": {
     "katex": "^0.19.1",
