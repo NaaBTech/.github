@@ -40,67 +40,66 @@ Nothing here is application code. It is documentation and configuration, maintai
 
 ```text
 profile/
-└── README.md                            # Organization profile
+└── README.md                              # Organization profile
 .github/
-├── dependabot.yml                       # Dependency update schedules
+├── dependabot.yml                         # Dependency update schedules
 ├── ISSUE_TEMPLATE/
-│   ├── bug_report.yml                   # Default issue form: bug report
-│   ├── feature_request.yml              # Default issue form: feature request
-│   ├── question.yml                     # Default issue form: question
-│   └── config.yml                       # Default issue template chooser
-├── labeler.yml                          # PR auto-labeler configuration
-├── release-drafter.yml                  # Release Drafter configuration
-├── VULNERABILITY_REPORT.yml             # Default private vulnerability report form
+│   ├── bug_report.yml                     # Default issue form: bug report
+│   ├── feature_request.yml                # Default issue form: feature request
+│   ├── question.yml                       # Default issue form: question
+│   └── config.yml                         # Default issue template chooser
+├── labeler.yml                            # PR auto-labeler configuration
+├── release-drafter.yml                    # Release Drafter configuration
+├── VULNERABILITY_REPORT.yml               # Default private vulnerability report form
 └── workflows/
-    ├── codeql.yml                       # CodeQL security analysis workflow
-    ├── first-interaction.yml            # Contributor greeting workflow
-    ├── labeler.yml                      # PR auto-labeling workflow
-    ├── release-drafter.yml              # Release notes drafting workflow
-    ├── reusable-gitleaks.yml            # Reusable secret scanning workflow
-    ├── reusable-release-drafter.yml     # Reusable release notes drafting workflow
-    ├── reusable-trivy.yml               # Reusable vulnerability scanning workflow
-    ├── scorecard.yml                    # OpenSSF Scorecard supply-chain security
-    ├── sync-labels.yml                  # Manual label synchronization workflow
-    └── validate-docs.yml                # Validation workflow for this repository
-CODE_OF_CONDUCT.md                       # Default code of conduct
-CONTRIBUTING.md                          # Default contribution guidelines
-LICENSE                                  # License for this repository's own contents
-PULL_REQUEST_TEMPLATE.md                 # Default pull request template
-README.md                                # This file
-REPOSITORY_ONBOARDING.md                 # Repository setup and maintenance checklist
-SECURITY.md                              # Default security policy
-SUPPORT.md                               # Default support guidance
+    ├── codeql.yml                         # CodeQL security analysis workflow
+    ├── first-interaction.yml              # Contributor greeting workflow
+    ├── labeler.yml                        # PR auto-labeling workflow
+    ├── release-drafter.yml                # Release notes drafting workflow
+    ├── reusable-gitleaks.yml              # Reusable secret scanning workflow
+    ├── reusable-release-drafter.yml       # Reusable release notes drafting workflow
+    ├── reusable-trivy.yml                 # Reusable vulnerability scanning workflow
+    ├── scorecard.yml                      # OpenSSF Scorecard supply-chain security
+    ├── sync-labels.yml                    # Manual label synchronization workflow
+    └── validate-docs.yml                  # Validation workflow for this repository
+CODE_OF_CONDUCT.md                         # Default code of conduct
+CONTRIBUTING.md                            # Default contribution guidelines
+LICENSE                                    # License for this repository's own contents
+PULL_REQUEST_TEMPLATE.md                   # Default pull request template
+README.md                                  # This file
+REPOSITORY_ONBOARDING.md                   # Repository setup and maintenance checklist
+SECURITY.md                                # Default security policy
+SUPPORT.md                                 # Default support guidance
 schemas/
-├── github-issue-forms.json              # Vendored JSON Schema for issue forms
-├── github-issue-config.json             # Vendored JSON Schema for the chooser
-├── github-vulnerability-report-form.json
-│                                        # Derived schema for vulnerability forms
-├── PROVENANCE.json                      # Where each schema came from, and when
-├── README.md                            # Schema sources, licensing, and maintenance
+├── github-issue-forms.json                # Vendored JSON Schema for issue forms
+├── github-issue-config.json               # Vendored JSON Schema for the chooser
+├── github-vulnerability-report-form.json  # Derived schema for vulnerability forms
+├── PROVENANCE.json                        # Where each schema came from, and when
+├── README.md                              # Schema sources, licensing, and maintenance
 └── third-party/
-    ├── LICENSE-Apache-2.0.txt           # License text covering the vendored schemas
-    └── NOTICE-SchemaStore.txt           # Upstream notice attribution
+    ├── LICENSE-Apache-2.0.txt             # License text covering the vendored schemas
+    └── NOTICE-SchemaStore.txt             # Upstream notice attribution
 scripts/
-├── validate_docs.py                     # File, form, link, and layout validation
-├── test_validate_docs.py                # Validator tests: negative cases and positive controls
-├── update_schemas.py                    # Refreshes the vendored schemas
-└── sync_labels.py                       # Label synchronization tool
+├── validate_docs.py                       # File, form, link, and layout validation
+├── test_validate_docs.py                  # Validator tests: negative cases and positive controls
+├── update_schemas.py                      # Refreshes the vendored schemas
+└── sync_labels.py                         # Label synchronization tool
 drafts/
-├── LICENSE-REVIEW.md                    # A factual review of the license
-├── ORGANIZATION-PROFILE-DRAFT.md        # A proposed organization profile
-└── WEBSITE-LAUNCH-CHECKLIST.md          # What changes at the website launch
-.codespellrc                             # codespell configuration
-ruff.toml                                # ruff configuration
-.gitleaks.toml                           # Secret scanning configuration
-.pre-commit-config.yaml                  # pre-commit hook configuration
-.gitattributes                           # Normalizes line endings to LF
-.gitignore                               # Ignores Python bytecode and node_modules
-.markdownlint.json                       # markdownlint configuration
-.markdownlintignore                      # Paths excluded from markdownlint
-.yamllint.yml                            # yamllint configuration
-package.json                             # Node tooling declaration
-package-lock.json                        # Pinned Node dependency tree
-requirements-docs.txt                    # Pinned Python tooling
+├── LICENSE-REVIEW.md                      # A factual review of the license
+├── ORGANIZATION-PROFILE-DRAFT.md          # A proposed organization profile
+└── WEBSITE-LAUNCH-CHECKLIST.md            # What changes at the website launch
+.codespellrc                               # codespell configuration
+ruff.toml                                  # ruff configuration
+.gitleaks.toml                             # Secret scanning configuration
+.pre-commit-config.yaml                    # pre-commit hook configuration
+.gitattributes                             # Normalizes line endings to LF
+.gitignore                                 # Ignores Python bytecode and node_modules
+.markdownlint.json                         # markdownlint configuration
+.markdownlintignore                        # Paths excluded from markdownlint
+.yamllint.yml                              # yamllint configuration
+package.json                               # Node tooling declaration
+package-lock.json                          # Pinned Node dependency tree
+requirements-docs.txt                      # Pinned Python tooling
 ```
 
 ### Which files are inherited
