@@ -58,6 +58,7 @@ profile/
     ├── release-drafter.yml                # Release notes drafting workflow
     ├── reusable-actionlint.yml            # Reusable GitHub Actions linting workflow
     ├── reusable-gitleaks.yml              # Reusable secret scanning workflow
+    ├── reusable-markdownlint.yml          # Reusable Markdown linting workflow
     ├── reusable-release-drafter.yml       # Reusable release notes drafting workflow
     ├── reusable-trivy.yml                 # Reusable vulnerability scanning workflow
     ├── scorecard.yml                      # OpenSSF Scorecard supply-chain security
@@ -117,7 +118,7 @@ Not every file in this repository applies to other organization repositories. Th
 
 `README.md` at the root of this repository is the readme for **this** repository. It is not a community health file and is not inherited by other repositories. `REPOSITORY_ONBOARDING.md` is a maintainer guide for this repository; GitHub has no mechanism for inheriting it.
 
-**Workflows are not organization defaults.** GitHub inherits community health files between repositories; it does not inherit workflow files. The `validate-docs.yml` workflow runs only in `NaaBTech/.github`. Shared reusable workflows (`reusable-actionlint.yml`, `reusable-gitleaks.yml`, `reusable-trivy.yml`, and `reusable-release-drafter.yml`) must still be called explicitly by each consuming repository, and every project that needs CI defines its own workflows under `.github/workflows/` — see [REPOSITORY_ONBOARDING.md](REPOSITORY_ONBOARDING.md).
+**Workflows are not organization defaults.** GitHub inherits community health files between repositories; it does not inherit workflow files. The `validate-docs.yml` workflow runs only in `NaaBTech/.github`. Shared reusable workflows (`reusable-actionlint.yml`, `reusable-gitleaks.yml`, `reusable-markdownlint.yml`, `reusable-trivy.yml`, and `reusable-release-drafter.yml`) must still be called explicitly by each consuming repository, and every project that needs CI defines its own workflows under `.github/workflows/` — see [REPOSITORY_ONBOARDING.md](REPOSITORY_ONBOARDING.md).
 
 ---
 
