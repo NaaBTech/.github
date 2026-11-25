@@ -1,0 +1,36 @@
+name: Reusable Actionlint
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  actionlint:
+    name: Lint GitHub Actions workflows
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Lint workflows with actionlint (SHA-256 verified)
+        shell: bash
+        run: |
+          set -euo pipefail
+          version='1.7.12'
+          want='8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8'
+          file="$(mktemp -d)/actionlint.tgz"
+          curl -fsSL --retry 2 --connect-timeout 15 -o "$file" \
+            "https://github.com/rhysd/actionlint/releases/download/v${version}/actionlint_${version}_linux_amd64.tar.gz"
+          got="$(sha256sum "$file" | cut -d' ' -f1)"
+          [ "$got" = "$want" ] || { echo "actionlint checksum mismatch: got $got want $want"; exit 1; }
+          mkdir -p "$RUNNER_TEMP/actionlint"
+          tar -xzf "$file" -C "$RUNNER_TEMP/actionlint" actionlint
+          "$RUNNER_TEMP/actionlint/actionlint" -color .github/workflows/*.y*ml
