@@ -33,3 +33,11 @@ jobs:
 
       - name: Scan the committed files for secrets
         run: gitleaks detect --source . --no-git --redact --no-banner --verbose
+
+      - name: Scan the commits of a pull request
+        if: github.event_name == 'pull_request'
+        run: |
+          set -euo pipefail
+          base="${{ github.event.pull_request.base.sha }}"
+          head="${{ github.event.pull_request.head.sha }}"
+          gitleaks git --redact --no-banner --log-opts "${base}..${head}" --verbose

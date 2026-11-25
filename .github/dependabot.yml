@@ -11,6 +11,14 @@ updates:
     open-pull-requests-limit: 5
     commit-message:
       prefix: "build"
+    groups:
+      codeql-actions:
+        patterns:
+          - "github/codeql-action*"
+    ignore:
+      # v2.6.0 GHCR image manifests return 404 (ossf/scorecard-action#1752).
+      - dependency-name: "ossf/scorecard-action"
+        versions: ["= 2.6.0"]
   - package-ecosystem: npm
     directory: "/"
     schedule:

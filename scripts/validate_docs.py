@@ -544,7 +544,13 @@ def headings(path):
 
 
 # Directories that are never part of the validated content.
-EXCLUDED_DIRECTORIES = {".git", "node_modules", "__pycache__", ".ruff_cache"}
+EXCLUDED_DIRECTORIES = {
+    ".git",
+    "node_modules",
+    "__pycache__",
+    ".ruff_cache",
+    ".pytest_cache",
+}
 
 # Working directories used by scripts/update_schemas.py: the staging area and
 # the per-transaction backup directories.
@@ -921,12 +927,12 @@ def run_checks(root):
                 if target not in markdown_files:
                     errors.append(
                         f"{name}: link '{raw_target}' has an anchor but "
-                        "'{target}' is not a Markdown file"
+                        f"'{target}' is not a Markdown file"
                     )
                 elif anchor not in headings(markdown_files[target]):
                     errors.append(
                         f"{name}: link '{raw_target}' points to an anchor "
-                        "that does not exist in '{target}'"
+                        f"that does not exist in '{target}'"
                     )
 
     # Markdown that nothing links to is hard to find. The organization profile

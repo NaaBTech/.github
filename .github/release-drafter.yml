@@ -2,47 +2,50 @@ name-template: 'v$RESOLVED_VERSION'
 tag-template: 'v$RESOLVED_VERSION'
 categories:
   - title: '🚀 Features & Improvements'
-    labels:
-      - 'enhancement'
-      - 'feature'
+    semver-increment: minor
+    when:
+      labels:
+        - 'enhancement'
+        - 'feature'
   - title: '🐛 Bug Fixes'
-    labels:
-      - 'bug'
-      - 'fix'
+    semver-increment: patch
+    when:
+      labels:
+        - 'bug'
+        - 'fix'
   - title: '🔒 Security Hardening'
-    labels:
-      - 'security'
+    semver-increment: patch
+    when:
+      label: 'security'
   - title: '📝 Documentation'
-    labels:
-      - 'documentation'
-      - 'docs'
+    semver-increment: patch
+    when:
+      labels:
+        - 'documentation'
+        - 'docs'
   - title: '📦 Dependencies & Tooling'
-    labels:
-      - 'dependencies'
-change-template: '- $TITLE (#$NUMBER) @$AUTHOR'
-change-title-escaped: true
-version-resolver:
-  major:
-    labels:
-      - 'major'
-      - 'breaking-change'
-  minor:
-    labels:
-      - 'minor'
-      - 'enhancement'
-  patch:
-    labels:
-      - 'patch'
-      - 'bug'
-      - 'fix'
-      - 'security'
-      - 'documentation'
-      - 'dependencies'
-  default: patch
+    semver-increment: patch
+    when:
+      label: 'dependencies'
+  - type: 'version-resolver'
+    semver-increment: 'major'
+    when:
+      labels:
+        - 'major'
+        - 'breaking-change'
+  - type: 'version-resolver'
+    semver-increment: 'minor'
+    when:
+      label: 'minor'
+  - type: 'version-resolver'
+    semver-increment: 'patch'
+    when:
+      label: 'patch'
+  - type: 'version-resolver'
+    semver-increment: 'patch'
+change-template: '- $CHANGE_TITLE ($CHANGE_REFERENCE) $CHANGE_AUTHORS'
+change-title-escapes: '\<*_&'
 template: |
   ## What's Changed
 
   $CHANGES
-
-  ---
-  **Full Changelog**: https://github.com/NaaBTech/.github/compare/$PREVIOUS_TAG...v$RESOLVED_VERSION
