@@ -55,7 +55,6 @@ profile/
     ├── codeql.yml                         # CodeQL security analysis workflow
     ├── first-interaction.yml              # Contributor greeting workflow
     ├── labeler.yml                        # PR auto-labeling workflow
-    ├── release-drafter.yml                # Release notes drafting workflow
     ├── reusable-actionlint.yml            # Reusable GitHub Actions linting workflow
     ├── reusable-gitleaks.yml              # Reusable secret scanning workflow
     ├── reusable-markdownlint.yml          # Reusable Markdown linting workflow
