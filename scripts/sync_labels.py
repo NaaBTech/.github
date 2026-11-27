@@ -157,7 +157,7 @@ def main():
         return 0
 
     token = args.token or os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
-    return sync_api(args.repo, token, dry_run=args.dry_run or not token)
+    return sync_api(args.repo, token, dry_run=args.dry_run)
 
 
 if __name__ == "__main__":

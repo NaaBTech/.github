@@ -182,6 +182,7 @@ REQUIRED_TOOLING_FILES = {
     ".markdownlintignore": "markdownlint exclusions",
     ".yamllint.yml": "yamllint configuration",
     ".codespellrc": "codespell configuration",
+    ".editorconfig": "editor formatting defaults",
     ".gitleaks.toml": "secret scanning configuration",
     ".pre-commit-config.yaml": "pre-commit hook configuration",
     "ruff.toml": "ruff configuration",
