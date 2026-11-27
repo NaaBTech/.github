@@ -195,7 +195,7 @@ Anything not on this list must be confirmed with the organization owners before 
 
 GitHub does not use an organization's `.github` repository as the source of a default license for other projects, so each software project needs its own license. That is a separate matter from licensing the contents of *this* repository — its documentation, the Python scripts, and the vendored schemas.
 
-- **The contents of this repository are licensed under Apache-2.0.** That covers the documentation, the Python scripts, the workflow, and the tool configuration, so that the organization defaults can be adopted and adapted in any repository, including proprietary ones.
+- **The contents of this repository are licensed under Apache-2.0.** That covers the documentation, the Python scripts, the workflows, and the tool configuration, so that the organization defaults can be adopted and adapted in any repository, including proprietary ones.
 - **The vendored schemas are a separate matter and are already covered.** The two schemas taken from [SchemaStore](https://github.com/SchemaStore/schemastore) are redistributed under that repository's **Apache-2.0** license, with the license text at [`schemas/third-party/LICENSE-Apache-2.0.txt`](schemas/third-party/LICENSE-Apache-2.0.txt) and the upstream notice at [`schemas/third-party/NOTICE-SchemaStore.txt`](schemas/third-party/NOTICE-SchemaStore.txt). The modified schema carries a notice stating what was changed, and the derived schema is identified as a derived work. See [`schemas/README.md`](schemas/README.md) and `schemas/PROVENANCE.json`.
 - **The upstream NOTICE is reproduced unchanged.** Apache-2.0 section 4(d) requires it to be redistributed as received, so it is never edited.
 

@@ -24,5 +24,6 @@ security:
           - '.gitleaks.toml'
           - '.github/workflows/codeql.yml'
           - '.github/workflows/scorecard.yml'
+          - '.github/workflows/reusable-actionlint.yml'
           - '.github/workflows/reusable-gitleaks.yml'
           - '.github/workflows/reusable-trivy.yml'

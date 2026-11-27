@@ -27,6 +27,8 @@ import os
 import shutil
 import sys
 import tempfile
+import urllib.error as _urllib_error
+import urllib.request as _urllib_request
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -2640,9 +2642,6 @@ def run():
         failures.append("sync_labels: sync_api without token did not exit with 1")
 
     behavior += 1
-    import urllib.error as _urllib_error
-    import urllib.request as _urllib_request
-
     orig_urlopen = _urllib_request.urlopen
 
     def failing_urlopen(*_args, **_kwargs):
@@ -2663,6 +2662,7 @@ def run():
     behavior += 1
     orig_argv = sys.argv
     orig_gh_token = os.environ.get("GITHUB_TOKEN")
+    orig_gh_cli_token = os.environ.get("GH_TOKEN")
     os.environ["GITHUB_TOKEN"] = "env-dummy-token"
     sys.argv = ["sync_labels.py", "--repo", "NaaBTech/test-repo"]
     _urllib_request.urlopen = failing_urlopen
@@ -2677,9 +2677,34 @@ def run():
             os.environ.pop("GITHUB_TOKEN", None)
         else:
             os.environ["GITHUB_TOKEN"] = orig_gh_token
+        if orig_gh_cli_token is None:
+            os.environ.pop("GH_TOKEN", None)
+        else:
+            os.environ["GH_TOKEN"] = orig_gh_cli_token
     if env_exit != 1 or "simulated network timeout" not in env_err_buf.getvalue():
         failures.append(
             f"sync_labels: main() did not pick up GITHUB_TOKEN env var: {env_err_buf.getvalue()!r}"
+        )
+
+    behavior += 1
+    orig_argv = sys.argv
+    orig_gh_token = os.environ.pop("GITHUB_TOKEN", None)
+    orig_gh_cli_token = os.environ.pop("GH_TOKEN", None)
+    sys.argv = ["sync_labels.py", "--repo", "NaaBTech/test-repo"]
+    missing_tok_buf = _io.StringIO()
+    try:
+        with contextlib.redirect_stderr(missing_tok_buf):
+            missing_tok_exit = sync_labels.main()
+    finally:
+        sys.argv = orig_argv
+        if orig_gh_token is not None:
+            os.environ["GITHUB_TOKEN"] = orig_gh_token
+        if orig_gh_cli_token is not None:
+            os.environ["GH_TOKEN"] = orig_gh_cli_token
+    if missing_tok_exit != 1 or "personal access token" not in missing_tok_buf.getvalue():
+        failures.append(
+            "sync_labels: main() without token or --dry-run did not fail cleanly: "
+            f"exit={missing_tok_exit} stderr={missing_tok_buf.getvalue()!r}"
         )
 
     checked = negative + positive + behavior
